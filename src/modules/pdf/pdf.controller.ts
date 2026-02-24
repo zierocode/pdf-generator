@@ -10,14 +10,17 @@ import {
   HttpException,
   NotFoundException,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { PdfService } from './pdf.service';
 import { FileStorageService } from './file-storage.service';
 import { GenerateBorrowingSlipDto } from './dto/generate-borrowing-slip.dto';
 import { GenerateServiceOrderDto } from './dto/generate-service-order.dto';
+import { ApiKeyGuard } from '../../common/guards/api-key.guard';
 
 @Controller('pdf')
+@UseGuards(ApiKeyGuard)
 export class PdfController {
   private readonly logger = new Logger(PdfController.name);
 

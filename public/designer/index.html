@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PDF Template Designer — Mazuma</title>
+  <link rel="stylesheet" href="https://unpkg.com/grapesjs@0.22.4/dist/css/grapes.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+    /* Top bar */
+    .top-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #1a1a2e; color: #fff; padding: 8px 16px; height: 48px;
+    }
+    .top-bar .logo { font-weight: 700; font-size: 15px; color: #1a9e96; }
+    .top-bar .logo span { color: #aaa; font-weight: 400; }
+    .top-bar .actions { display: flex; gap: 8px; }
+    .top-bar .actions button {
+      padding: 6px 14px; border: none; border-radius: 4px; cursor: pointer;
+      font-size: 13px; font-weight: 500;
+    }
+    .btn-secondary { background: #333; color: #ccc; }
+    .btn-secondary:hover { background: #444; }
+    .btn-primary { background: #1a9e96; color: #fff; }
+    .btn-primary:hover { background: #158f88; }
+    .btn-danger { background: #c0392b; color: #fff; }
+    .btn-danger:hover { background: #a93226; }
+
+    /* Template selector */
+    .template-selector {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .template-selector select {
+      padding: 5px 10px; border-radius: 4px; border: 1px solid #444;
+      background: #2a2a3e; color: #fff; font-size: 13px;
+    }
+
+    /* Editor layout */
+    .editor-container {
+      display: flex; height: calc(100vh - 48px);
+    }
+
+    /* Left sidebar — blocks */
+    .left-sidebar {
+      width: 240px; background: #1a1a2e; border-right: 1px solid #333;
+      overflow-y: auto;
+    }
+    .left-sidebar h3 {
+      padding: 10px 12px 6px; font-size: 11px; text-transform: uppercase;
+      color: #888; letter-spacing: 1px;
+    }
+
+    /* Variable picker */
+    .var-picker { padding: 8px 12px; }
+    .var-picker .var-group { margin-bottom: 8px; }
+    .var-picker .var-group-title {
+      font-size: 11px; color: #888; margin-bottom: 4px; font-weight: 600;
+    }
+    .var-btn {
+      display: block; width: 100%; padding: 4px 8px; margin: 2px 0;
+      background: #1e3a5f; border: 1px solid #2563eb; border-radius: 3px;
+      color: #93c5fd; font-size: 11px; font-family: monospace; cursor: pointer;
+      text-align: left;
+    }
+    .var-btn:hover { background: #2563eb; color: #fff; }
+
+    /* Canvas area */
+    .canvas-area { flex: 1; }
+
+    /* Right sidebar — style manager / traits */
+    .right-sidebar {
+      width: 280px; background: #1a1a2e; border-left: 1px solid #333;
+      overflow-y: auto;
+    }
+
+    /* GrapesJS overrides */
+    .gjs-one-bg { background-color: #1a1a2e; }
+    .gjs-two-color { color: #ddd; }
+    .gjs-three-bg { background-color: #2a2a3e; }
+    .gjs-four-color, .gjs-four-color-h:hover { color: #1a9e96; }
+    .gjs-block { min-height: auto; padding: 8px; }
+    .gjs-block__media { display: none; }
+    .gjs-block-label { font-size: 12px; }
+    .gjs-pn-views-container, .gjs-pn-views { display: none; }
+
+    /* Status bar */
+    .status-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: #111; color: #888; font-size: 11px;
+      padding: 4px 16px; display: flex; justify-content: space-between;
+      z-index: 100;
+    }
+
+    /* Toast notification */
+    .toast {
+      position: fixed; top: 60px; right: 20px; z-index: 1000;
+      padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 500;
+      color: #fff; opacity: 0; transform: translateY(-10px);
+      transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #1a9e96; }
+    .toast.error { background: #c0392b; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="logo">PDF Designer <span>— Mazuma</span></div>
+    <div class="template-selector">
+      <select id="template-select">
+        <option value="">— Select Template —</option>
+      </select>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn-secondary" id="btn-undo" title="Undo"><i class="fa fa-undo"></i></button>
+    <button class="btn-secondary" id="btn-redo" title="Redo"><i class="fa fa-redo"></i></button>
+    <button class="btn-danger" id="btn-discard" title="Discard changes"><i class="fa fa-rotate-left"></i> Discard</button>
+    <div style="width:1px;height:24px;background:#444;margin:0 4px;"></div>
+    <button class="btn-secondary" id="btn-preview"><i class="fa fa-eye"></i> Preview</button>
+    <button class="btn-primary" id="btn-save"><i class="fa fa-save"></i> Save</button>
+    <button class="btn-primary" id="btn-generate"><i class="fa fa-file-pdf"></i> Generate PDF</button>
+  </div>
+</div>
+
+<div class="editor-container">
+  <div class="left-sidebar">
+    <h3>Components</h3>
+    <div id="blocks"></div>
+    <h3>Data Variables</h3>
+    <div class="var-picker" id="var-picker"></div>
+  </div>
+  <div class="canvas-area">
+    <div id="gjs"></div>
+  </div>
+  <div class="right-sidebar">
+    <div id="style-manager"></div>
+    <div id="trait-manager"></div>
+    <div id="layers"></div>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span id="status-text">Ready</span>
+  <span id="status-size">A4 Portrait (210mm × 297mm)</span>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/grapesjs@0.22.4/dist/grapes.min.js"></script>
+<script>
+// ============================================================
+// CONFIG
+// ============================================================
+const API_BASE = '';
+const FONT_FAMILY = "'Bai Jamjuree', sans-serif";
+
+const VARIABLE_GROUPS = {
+  'Document': [
+    'documentNo', 'documentType', 'workOrderNo', 'workOrderType',
+    'openDate', 'runDate',
+  ],
+  'Customer': [
+    'customerName', 'customerCode', 'contactName', 'contactPhone',
+  ],
+  'Product': [
+    'productName', 'productCode', 'serialNo',
+  ],
+  'Service': [
+    'serviceCenter', 'technicianName', 'technicianWarehouse',
+    'managedBy', 'senderWarehouse', 'receiverWarehouse',
+  ],
+  'Company': [
+    'phone', 'taxId', 'paymentChannel',
+  ],
+};
+
+// ============================================================
+// GRAPESJS INIT
+// ============================================================
+const editor = grapesjs.init({
+  container: '#gjs',
+  height: 'calc(100vh - 48px)',
+  width: '100%',
+  dragMode: 'absolute',
+  fromElement: false,
+
+  canvas: {
+    styles: [
+      'https://fonts.googleapis.com/css2?family=Bai+Jamjuree:wght@400;500;600;700&display=swap',
+    ],
+  },
+
+  panels: { defaults: [] },
+  blockManager: { appendTo: '#blocks' },
+  styleManager: {
+    appendTo: '#style-manager',
+    sectors: [
+      {
+        name: 'Typography',
+        open: true,
+        properties: [
+          {
+            property: 'font-family',
+            type: 'select',
+            defaults: FONT_FAMILY,
+            options: [
+              { id: FONT_FAMILY, label: 'Bai Jamjuree' },
+              { id: 'Arial, sans-serif', label: 'Arial' },
+              { id: "'Times New Roman', serif", label: 'Times New Roman' },
+            ],
+          },
+          { property: 'font-size', type: 'number', units: ['px', 'pt', 'em'], defaults: '13px' },
+          {
+            property: 'font-weight',
+            type: 'select',
+            defaults: '400',
+            options: [
+              { id: '400', label: 'Regular' },
+              { id: '500', label: 'Medium' },
+              { id: '600', label: 'SemiBold' },
+              { id: '700', label: 'Bold' },
+            ],
+          },
+          { property: 'color', type: 'color', defaults: '#333333' },
+          { property: 'line-height', type: 'number', units: ['', 'px'], defaults: '1.35' },
+          { property: 'text-align', type: 'select', options: [
+            { id: 'left', label: 'Left' }, { id: 'center', label: 'Center' },
+            { id: 'right', label: 'Right' }, { id: 'justify', label: 'Justify' },
+          ]},
+          { property: 'letter-spacing', type: 'number', units: ['px'], defaults: '0' },
+        ],
+      },
+      {
+        name: 'Layout',
+        open: false,
+        properties: [
+          { property: 'width', type: 'number', units: ['px', 'mm', '%'] },
+          { property: 'height', type: 'number', units: ['px', 'mm', '%', 'auto'] },
+          { property: 'padding', type: 'composite', properties: [
+            { property: 'padding-top', type: 'number', units: ['px', 'mm'] },
+            { property: 'padding-right', type: 'number', units: ['px', 'mm'] },
+            { property: 'padding-bottom', type: 'number', units: ['px', 'mm'] },
+            { property: 'padding-left', type: 'number', units: ['px', 'mm'] },
+          ]},
+          { property: 'margin', type: 'composite', properties: [
+            { property: 'margin-top', type: 'number', units: ['px', 'mm'] },
+            { property: 'margin-right', type: 'number', units: ['px', 'mm'] },
+            { property: 'margin-bottom', type: 'number', units: ['px', 'mm'] },
+            { property: 'margin-left', type: 'number', units: ['px', 'mm'] },
+          ]},
+        ],
+      },
+      {
+        name: 'Appearance',
+        open: false,
+        properties: [
+          { property: 'background-color', type: 'color' },
+          { property: 'border', type: 'composite', properties: [
+            { property: 'border-width', type: 'number', units: ['px'], defaults: '1px' },
+            { property: 'border-style', type: 'select', options: [
+              { id: 'none', label: 'None' }, { id: 'solid', label: 'Solid' },
+              { id: 'dashed', label: 'Dashed' }, { id: 'dotted', label: 'Dotted' },
+            ]},
+            { property: 'border-color', type: 'color', defaults: '#cccccc' },
+          ]},
+        ],
+      },
+    ],
+  },
+  traitManager: { appendTo: '#trait-manager' },
+  layerManager: { appendTo: '#layers' },
+
+  storageManager: false,
+
+  deviceManager: {
+    devices: [
+      { name: 'A4 Portrait', width: '794px' }, // 210mm at 96dpi
+    ],
+  },
+
+  components: `
+    <div class="pdf-page" data-gjs-type="pdf-page" data-gjs-removable="false" data-gjs-draggable="false" data-gjs-copyable="false">
+    </div>
+  `,
+
+  style: `
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #d0d0d0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      gap: 20px;
+      font-family: ${FONT_FAMILY};
+    }
+    .pdf-page {
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      position: relative;
+      padding: 8mm;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+      overflow: hidden;
+      font-family: ${FONT_FAMILY};
+      font-size: 13px;
+      line-height: 1.35;
+      color: #333;
+    }
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+      height: 0;
+      border-top: 2px dashed #999;
+      margin: 10px 0;
+      clear: both;
+    }
+    .tpl-var {
+      background: #e3f2fd;
+      border: 1px solid #90caf9;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-family: monospace;
+      font-size: 11px;
+      color: #1565c0;
+      display: inline;
+      white-space: nowrap;
+    }
+    .pdf-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .pdf-table th, .pdf-table td {
+      border: 1px solid #ccc;
+      padding: 4px 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+    .pdf-table th {
+      background: #e8e8e8;
+      font-weight: 600;
+      text-align: center;
+    }
+    .doc-title {
+      font-size: 30px;
+      font-weight: 700;
+      color: #1a9e96;
+      white-space: nowrap;
+    }
+    .company-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding-bottom: 4px;
+      margin-bottom: 2px;
+    }
+    .info-label { font-weight: 600; white-space: nowrap; color: #333; }
+    .info-value { color: #444; }
+    @media print {
+      body { background: none; padding: 0; gap: 0; }
+      .pdf-page { box-shadow: none; margin: 0; }
+    }
+    @page { size: A4; margin: 0; }
+  `,
+});
+
+// ============================================================
+// CUSTOM COMPONENT: PDF Page
+// ============================================================
+editor.DomComponents.addType('pdf-page', {
+  isComponent: el => el.classList && el.classList.contains('pdf-page'),
+  model: {
+    defaults: {
+      tagName: 'div',
+      draggable: false,
+      droppable: true,
+      removable: false,
+      copyable: false,
+      attributes: { class: 'pdf-page' },
+    },
+  },
+});
+
+// ============================================================
+// CUSTOM COMPONENT: Page Break
+// ============================================================
+editor.DomComponents.addType('page-break', {
+  isComponent: el => el.classList && el.classList.contains('page-break'),
+  model: {
+    defaults: {
+      tagName: 'div',
+      droppable: false,
+      attributes: { class: 'page-break' },
+      content: '',
+    },
+  },
+});
+
+// ============================================================
+// CUSTOM COMPONENT: Template Variable
+// ============================================================
+editor.DomComponents.addType('template-var', {
+  isComponent: el => el.classList && el.classList.contains('tpl-var'),
+  model: {
+    defaults: {
+      tagName: 'span',
+      droppable: false,
+      attributes: { class: 'tpl-var' },
+      content: '{{variable}}',
+      traits: [{
+        type: 'text',
+        name: 'data-var',
+        label: 'Variable Name',
+      }],
+    },
+    init() {
+      this.on('change:attributes:data-var', this.updateVarContent);
+    },
+    updateVarContent() {
+      const v = this.getAttributes()['data-var'];
+      if (v) this.set('content', `{{${v}}}`);
+    },
+  },
+});
+
+// ============================================================
+// BLOCKS
+// ============================================================
+const bm = editor.BlockManager;
+
+bm.add('text-block', {
+  label: '<i class="fa fa-font"></i> Text',
+  category: 'Basic',
+  content: '<div style="padding:4px;font-size:13px;">Text content</div>',
+});
+
+bm.add('heading', {
+  label: '<i class="fa fa-heading"></i> Heading',
+  category: 'Basic',
+  content: '<h2 style="font-size:18px;font-weight:700;color:#333;margin-bottom:4px;">Heading</h2>',
+});
+
+bm.add('doc-title', {
+  label: '<i class="fa fa-star"></i> Doc Title',
+  category: 'Mazuma',
+  content: '<div class="doc-title">Document Title</div>',
+});
+
+bm.add('image', {
+  label: '<i class="fa fa-image"></i> Image',
+  category: 'Basic',
+  content: { type: 'image' },
+});
+
+bm.add('pdf-table-3x4', {
+  label: '<i class="fa fa-table"></i> Table 3×4',
+  category: 'Tables',
+  content: `<table class="pdf-table">
+    <thead><tr><th>Header 1</th><th>Header 2</th><th>Header 3</th></tr></thead>
+    <tbody>
+      <tr><td>Cell</td><td>Cell</td><td>Cell</td></tr>
+      <tr><td>Cell</td><td>Cell</td><td>Cell</td></tr>
+      <tr><td>Cell</td><td>Cell</td><td>Cell</td></tr>
+    </tbody>
+  </table>`,
+});
+
+bm.add('pdf-table-5x6', {
+  label: '<i class="fa fa-table-cells"></i> Table 5×6',
+  category: 'Tables',
+  content: (() => {
+    let h = '<table class="pdf-table"><thead><tr>';
+    for (let i = 0; i < 5; i++) h += `<th>Col ${i+1}</th>`;
+    h += '</tr></thead><tbody>';
+    for (let r = 0; r < 5; r++) {
+      h += '<tr>';
+      for (let c = 0; c < 5; c++) h += '<td>Cell</td>';
+      h += '</tr>';
+    }
+    return h + '</tbody></table>';
+  })(),
+});
+
+bm.add('info-row', {
+  label: '<i class="fa fa-grip-lines"></i> Info Row',
+  category: 'Mazuma',
+  content: `<div style="display:flex;gap:6px;padding:2px 0;font-size:12px;">
+    <span class="info-label">Label:</span>
+    <span class="info-value">Value</span>
+  </div>`,
+});
+
+bm.add('page-break', {
+  label: '<i class="fa fa-scissors"></i> Page Break',
+  category: 'Layout',
+  content: { type: 'page-break' },
+});
+
+bm.add('divider', {
+  label: '<i class="fa fa-minus"></i> Divider',
+  category: 'Layout',
+  content: '<hr style="border:none;border-top:1px solid #ccc;margin:6px 0;">',
+});
+
+bm.add('spacer', {
+  label: '<i class="fa fa-arrows-up-down"></i> Spacer',
+  category: 'Layout',
+  content: '<div style="height:20px;"></div>',
+});
+
+bm.add('two-column', {
+  label: '<i class="fa fa-columns"></i> 2 Columns',
+  category: 'Layout',
+  content: `<div style="display:flex;gap:10px;">
+    <div style="flex:1;min-height:40px;"></div>
+    <div style="flex:1;min-height:40px;"></div>
+  </div>`,
+});
+
+bm.add('template-var', {
+  label: '<i class="fa fa-code"></i> Variable',
+  category: 'Template',
+  content: { type: 'template-var', 'data-var': 'variableName' },
+});
+
+// ============================================================
+// VARIABLE PICKER
+// ============================================================
+const varPickerEl = document.getElementById('var-picker');
+Object.entries(VARIABLE_GROUPS).forEach(([group, vars]) => {
+  const groupEl = document.createElement('div');
+  groupEl.className = 'var-group';
+  groupEl.innerHTML = `<div class="var-group-title">${group}</div>`;
+  vars.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'var-btn';
+    btn.textContent = `{{${v}}}`;
+    btn.onclick = () => insertVariable(v);
+    groupEl.appendChild(btn);
+  });
+  varPickerEl.appendChild(groupEl);
+});
+
+function insertVariable(varName) {
+  const selected = editor.getSelected();
+  const varComp = {
+    type: 'template-var',
+    attributes: { class: 'tpl-var', 'data-var': varName },
+    content: `{{${varName}}}`,
+  };
+
+  if (selected) {
+    selected.append(varComp);
+  } else {
+    // Add to first pdf-page
+    const page = editor.getWrapper().find('.pdf-page')[0];
+    if (page) page.append(varComp);
+  }
+  setStatus(`Inserted {{${varName}}}`);
+}
+
+// ============================================================
+// TEMPLATE MANAGEMENT
+// ============================================================
+let currentTemplateId = null;
+
+async function loadTemplateList() {
+  try {
+    const res = await fetch(`${API_BASE}/api/templates`);
+    if (!res.ok) return;
+    const templates = await res.json();
+    const sel = document.getElementById('template-select');
+    sel.innerHTML = '<option value="">— Select Template —</option>';
+    templates.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id;
+      opt.textContent = t.name;
+      sel.appendChild(opt);
+    });
+  } catch (e) {
+    console.warn('Could not load templates:', e);
+  }
+}
+
+async function loadTemplate() {
+  const id = document.getElementById('template-select').value;
+  if (!id) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/templates/${id}`);
+    if (!res.ok) throw new Error('Failed to load');
+    const tpl = await res.json();
+
+    if (tpl.projectData && Object.keys(tpl.projectData).length > 0) {
+      editor.loadProjectData(tpl.projectData);
+    } else if (tpl.html) {
+      editor.setComponents(tpl.html);
+      if (tpl.css) editor.setStyle(tpl.css);
+    }
+
+    currentTemplateId = id;
+    setStatus(`Loaded: ${tpl.name}`);
+  } catch (e) {
+    showToast('Error loading template: ' + e.message, 'error');
+  }
+}
+
+async function saveTemplate() {
+  if (!currentTemplateId) {
+    showToast('Please select a template first', 'error');
+    return;
+  }
+
+  const name = document.getElementById('template-select').selectedOptions[0]?.textContent;
+  const projectData = editor.getProjectData();
+  const html = editor.getHtml();
+  const css = editor.getCss();
+
+  try {
+    const res = await fetch(`${API_BASE}/api/templates/${currentTemplateId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, projectData, html, css }),
+    });
+    if (!res.ok) throw new Error('Save failed');
+    showToast(`Saved: ${name}`, 'success');
+    setStatus(`Saved: ${name}`);
+  } catch (e) {
+    showToast('Error saving: ' + e.message, 'error');
+  }
+}
+
+async function previewPdf() {
+  setStatus('Generating preview...');
+  const html = editor.getHtml();
+  const css = editor.getCss();
+
+  try {
+    const res = await fetch(`${API_BASE}/api/templates/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ html, css, data: {} }),
+    });
+    if (!res.ok) throw new Error('Preview failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setStatus('Preview opened');
+  } catch (e) {
+    showToast('Preview error: ' + e.message, 'error');
+    setStatus('Preview failed');
+  }
+}
+
+async function generatePdf() {
+  if (!currentTemplateId) {
+    showToast('Please select a template first', 'error');
+    return;
+  }
+
+  setStatus('Generating PDF...');
+  try {
+    const res = await fetch(`${API_BASE}/api/templates/${currentTemplateId}/render`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: {} }),
+    });
+    if (!res.ok) throw new Error('Generation failed');
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+    setStatus('PDF generated');
+  } catch (e) {
+    showToast('Generate error: ' + e.message, 'error');
+    setStatus('Generation failed');
+  }
+}
+
+async function discardChanges() {
+  if (!currentTemplateId) {
+    showToast('No template loaded', 'error');
+    return;
+  }
+  if (!confirm('Discard all unsaved changes?')) return;
+  await loadTemplate();
+  showToast('Changes discarded', 'success');
+}
+
+function setStatus(msg) {
+  document.getElementById('status-text').textContent = msg;
+}
+
+function showToast(msg, type = 'success') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = `toast ${type} show`;
+  setTimeout(() => { toast.classList.remove('show'); }, 3000);
+}
+
+// Event listeners (no inline handlers — CSP compliant)
+document.getElementById('template-select').addEventListener('change', loadTemplate);
+document.getElementById('btn-undo').addEventListener('click', () => { editor.UndoManager.undo(); setStatus('Undo'); });
+document.getElementById('btn-redo').addEventListener('click', () => { editor.UndoManager.redo(); setStatus('Redo'); });
+document.getElementById('btn-discard').addEventListener('click', discardChanges);
+document.getElementById('btn-preview').addEventListener('click', previewPdf);
+document.getElementById('btn-save').addEventListener('click', saveTemplate);
+document.getElementById('btn-generate').addEventListener('click', generatePdf);
+
+// Init
+loadTemplateList();
+setStatus('Ready — drag components to the canvas');
+</script>
+</body>
+</html>

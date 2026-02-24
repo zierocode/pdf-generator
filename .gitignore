@@ -21,3 +21,12 @@ npm-debug.log*
 
 # generated PDFs (auto-purged after 24h)
 /output
+
+# reference PDFs (CraftMyPDF originals)
+assets/*.pdf
+
+# template data (user-created templates)
+/data/templates/*.json
+
+# Playwright MCP (local browser automation)
+.playwright-mcp/
