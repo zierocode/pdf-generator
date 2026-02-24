@@ -1,0 +1,31 @@
+<div class="doc-header">
+  <div class="doc-header-left">
+    {{#if logoBase64}}
+      <img src="{{logoBase64}}" alt="Mazuma" />
+    {{/if}}
+    <div class="company-info">
+      <div class="name-th">บริษัท มาซูม่า เซอร์วิส จำกัด</div>
+      <div class="name-en">MAZUMA SERVICE CO., LTD.</div>
+    </div>
+  </div>
+  {{#if qrCodeDataUri}}
+  <div class="doc-header-center">
+    <img src="{{qrCodeDataUri}}" alt="QR" />
+  </div>
+  {{/if}}
+  <div class="doc-header-right">
+    <div class="doc-title">{{title}}</div>
+  </div>
+</div>
+<div class="address-line">
+  <div class="address-text">
+    1296/9-10 ถนนกรุงเทพ-นนทบุรี แขวงบางซื่อ เขตบางซื่อ กรุงเทพฯ 10800<br/>
+    1296/9-10 Bangkok-Nonthaburi Rd., Bangsue, Bangsue, Bangkok 10800
+  </div>
+  {{#if phone}}
+  <div class="phone-tax-inline">
+    <span class="phone">โทร {{phone}}</span>
+    {{#if taxId}}<span class="tax-id">TAX ID: {{taxId}}</span>{{/if}}
+  </div>
+  {{/if}}
+</div>

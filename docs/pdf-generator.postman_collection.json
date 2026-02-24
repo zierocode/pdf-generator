@@ -1,0 +1,237 @@
+{
+  "info": {
+    "name": "PDF Generator — Mazuma MVP",
+    "description": "In-house PDF Generation Service สำหรับ Mazuma\n\n## Endpoints\n- **Borrowing Slip** — ใบยืมสินค้า/อะไหล่ (1 page)\n- **Service Order** — ใบสั่งงานบริการ (2 pages)\n\n## Output Modes\n- **Default (file):** POST → save file → return JSON { fileName, fileUrl }\n- **Stream:** POST ?output=stream → return PDF binary\n- **Download:** GET /pdf/files/:fileName → download saved PDF\n\n## Auto-purge\nFiles older than 24 hours are automatically deleted.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Borrowing Slip",
+      "item": [
+        {
+          "name": "Generate Borrowing Slip (file)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Has fileUrl', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.fileUrl).to.be.a('string');",
+                  "  pm.expect(json.fileName).to.include('borrowing-slip');",
+                  "  pm.collectionVariables.set('lastBorrowingSlipFile', json.fileName);",
+                  "  pm.collectionVariables.set('lastBorrowingSlipUrl', json.fileUrl);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pdf/borrowing-slip",
+              "host": ["{{baseUrl}}"],
+              "path": ["pdf", "borrowing-slip"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentNo\": \"2511BR000245\",\n  \"documentType\": \"ใบยืมหลัก\",\n  \"customerName\": \"Natthapong Maiwan\",\n  \"productName\": \"เครื่องกรองน้ำ S38-122-100LM\",\n  \"productCode\": \"30-3280-F\",\n  \"workOrderNo\": \"2511TS000162\",\n  \"workOrderType\": \"ซ่อมและเปลี่ยนสาร\",\n  \"runDate\": \"2025-11-18T00:00:00.000Z\",\n  \"technicianName\": \"Nut Gundamas\",\n  \"technicianWarehouse\": \"WBS-UPC-KK01\",\n  \"openDate\": \"2025-11-18T00:00:00.000Z\",\n  \"serviceCenter\": \"KK\",\n  \"managedBy\": \"pir dev\",\n  \"senderWarehouse\": \"คุณสุปรีชา ร้อยพา\",\n  \"receiverWarehouse\": \"คุณสุปรีชา ร้อยพา\",\n  \"parts\": [\n    {\n      \"matUnitId\": \"M1-83468-F\",\n      \"matName\": \"สารกรองแมงกานีส บรรจุถุง 7 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n      \"borrowed\": 4,\n      \"issued\": 4,\n      \"free\": null,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 470.00,\n      \"salePrice\": 470.00\n    },\n    {\n      \"matUnitId\": \"60-6823-F\",\n      \"matName\": \"เกลือล้างสารกรองเรซิ่น บรรจุถุง 160g (For 3นิ้ว)\",\n      \"borrowed\": 4,\n      \"issued\": 4,\n      \"free\": null,\n      \"sold\": 2,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 100.00,\n      \"salePrice\": 200.00\n    },\n    {\n      \"matUnitId\": \"M2-80182-F\",\n      \"matName\": \"สารกรองคาร์บอน บรรจุถุง 10 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n      \"borrowed\": 4,\n      \"issued\": 3,\n      \"free\": null,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 1000.00,\n      \"salePrice\": 1000.00\n    },\n    {\n      \"matUnitId\": \"M0-80182-F\",\n      \"matName\": \"สารกรองคาร์บอน บรรจุถุง 5 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n      \"borrowed\": 3,\n      \"issued\": 3,\n      \"free\": null,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 520.00,\n      \"salePrice\": 520.00\n    },\n    {\n      \"matUnitId\": \"M2-73838-F\",\n      \"matName\": \"สารกรองแอนทราไซด์บรรจุถุง 10 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n      \"borrowed\": 3,\n      \"issued\": 3,\n      \"free\": null,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 950.00,\n      \"salePrice\": 950.00\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Generate Borrowing Slip (stream)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pdf/borrowing-slip?output=stream",
+              "host": ["{{baseUrl}}"],
+              "path": ["pdf", "borrowing-slip"],
+              "query": [{ "key": "output", "value": "stream" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentNo\": \"2511BR000245\",\n  \"documentType\": \"ใบยืมหลัก\",\n  \"customerName\": \"Natthapong Maiwan\",\n  \"productName\": \"เครื่องกรองน้ำ S38-122-100LM\",\n  \"productCode\": \"30-3280-F\",\n  \"workOrderNo\": \"2511TS000162\",\n  \"workOrderType\": \"ซ่อมและเปลี่ยนสาร\",\n  \"runDate\": \"2025-11-18T00:00:00.000Z\",\n  \"technicianName\": \"Nut Gundamas\",\n  \"technicianWarehouse\": \"WBS-UPC-KK01\",\n  \"openDate\": \"2025-11-18T00:00:00.000Z\",\n  \"serviceCenter\": \"KK\",\n  \"managedBy\": \"pir dev\",\n  \"senderWarehouse\": \"คุณสุปรีชา ร้อยพา\",\n  \"receiverWarehouse\": \"คุณสุปรีชา ร้อยพา\",\n  \"parts\": [\n    {\n      \"matUnitId\": \"M1-83468-F\",\n      \"matName\": \"สารกรองแมงกานีส บรรจุถุง 7 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n      \"borrowed\": 4,\n      \"issued\": 4,\n      \"free\": null,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 470.00,\n      \"salePrice\": 470.00\n    }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Download Borrowing Slip",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type is PDF', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{lastBorrowingSlipUrl}}",
+              "host": ["{{lastBorrowingSlipUrl}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Service Order",
+      "item": [
+        {
+          "name": "Generate Service Order (file)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Has fileUrl', () => {",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.success).to.be.true;",
+                  "  pm.expect(json.fileUrl).to.be.a('string');",
+                  "  pm.expect(json.fileName).to.include('service-order');",
+                  "  pm.collectionVariables.set('lastServiceOrderFile', json.fileName);",
+                  "  pm.collectionVariables.set('lastServiceOrderUrl', json.fileUrl);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pdf/service-order",
+              "host": ["{{baseUrl}}"],
+              "path": ["pdf", "service-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workOrderNo\": \"2511TS000051\",\n  \"previousWorkOrderNo\": \"\",\n  \"openDate\": \"2025-11-10T04:57:19.896Z\",\n  \"createdBy\": \"pir dev\",\n  \"customerName\": \"Chayanan Chutimamas\",\n  \"customerCode\": \"40203\",\n  \"contactName\": \"ชยานันต์ ชุติมามาศ\",\n  \"contactPhone\": \"0828488805\",\n  \"workOrderType\": \"ซ่อมและเปลี่ยนสาร\",\n  \"productName\": \"เครื่องกรองน้ำ S19-90-20MIX\",\n  \"productCode\": \"30-0026-F\",\n  \"serialNo\": \"Test90001218\",\n  \"serviceCenter\": \"ศูนย์บริการนวมินทร์\",\n  \"serviceDate\": \"2025-11-09T17:00:00.000Z\",\n  \"serviceTime\": \"08:00\",\n  \"purchaseDate\": \"\",\n  \"purchaseLocation\": \"\",\n  \"installDate\": \"\",\n  \"productAddress\": \"21/89, บ้านหลวง, จอมทอง, เชียงใหม่, 50160\",\n  \"receiveAddress\": \"21349/5455 แขวง สวนจิตรลดา เขต เขตดุสิต กรุงเทพมหานคร 10300\",\n  \"taxInvoiceAddress\": \"\",\n  \"initialSymptom\": \"\",\n  \"actionPerformed\": \"test\",\n  \"customerAdvice\": \"test\",\n  \"preInstallData\": {\n    \"waterPressure\": \"1\",\n    \"chlorine\": \"1\",\n    \"tds\": \"1\",\n    \"hardness\": \"1\",\n    \"airPressure\": \"1\",\n    \"waterTemp\": \"1\",\n    \"ph\": \"1\"\n  },\n  \"postInstallData\": {\n    \"waterPressure\": \"1\",\n    \"chlorine\": \"1\",\n    \"tds\": \"1\",\n    \"hardness\": \"1\",\n    \"airPressure\": \"1\",\n    \"waterTemp\": \"1\",\n    \"ph\": \"1\"\n  },\n  \"technicianName\": \"ปอนด์ที่ส่งP1ได้ เทส\",\n  \"technicianWarehouse\": \"WBS-EC-A33\",\n  \"borrowSlipNos\": \"2511BR000089, 2511BR000088\",\n  \"quotationNo\": \"2511QT000013\",\n  \"evaluationResult\": \"NONE\",\n  \"evaluator\": \"pir dev\",\n  \"travelStartTime\": \"2025-11-10T05:12:59.780Z\",\n  \"workStartTime\": \"2025-11-10T05:13:16.538Z\",\n  \"workEndTime\": \"2025-11-10T05:14:01.860Z\",\n  \"costs\": {\n    \"productCost\": 179,\n    \"serviceFee\": 168.3,\n    \"installationFee\": 99,\n    \"travelCost\": 148.5,\n    \"otherCost\": 198,\n    \"totalCost\": 613.8\n  },\n  \"checklist\": [\n    { \"no\": 1, \"description\": \"ช่างได้แสดงบัตรประจำตัวพนักงานและแนะนำตัวเองให้ลูกค้าตรวจสอบ\", \"checked\": true },\n    { \"no\": 2, \"description\": \"ช่างได้ชี้แจงวัตถุประสงค์ในการให้บริการครั้งนี้อย่างชัดเจน\", \"checked\": true },\n    { \"no\": 3, \"description\": \"ช่างได้ตรวจสอบพื้นที่การทำงานและเครื่องที่จะรับบริการก่อนเริ่มดำเนินการ\", \"checked\": true },\n    { \"no\": 4, \"description\": \"ช่างได้แจ้งค่าใช้จ่ายให้ลูกค้ารับทราบก่อนเริ่มปฏิบัติงานทุกครั้ง\", \"checked\": true },\n    { \"no\": 5, \"description\": \"ช่างได้ตรวจสอบความเรียบร้อยของการให้บริการร่วมกับลูกค้า\", \"checked\": true },\n    { \"no\": 6, \"description\": \"ช่างได้ทำความสะอาดบริเวณพื้นที่หน้างานของลูกค้าให้เรียบร้อยแล้ว\", \"checked\": true },\n    { \"no\": 7, \"description\": \"ช่างได้ดำเนินการปรับตั้งวาล์วน้ำและเบรกเกอร์ที่เกี่ยวข้องให้ถูกต้องครบถ้วน\", \"checked\": true },\n    { \"no\": 8, \"description\": \"ช่างได้ให้คำแนะนำและอธิบายวิธีการใช้งานเครื่องแก่ลูกค้าอย่างละเอียด\", \"checked\": true },\n    { \"no\": 9, \"description\": \"แนะนำลูกค้าปิดวาล์วน้ำเมื่อออกจากบ้านเป็นระยะเวลานาน\", \"checked\": true }\n  ],\n  \"customerSignatureUrl\": \"\",\n  \"qrCodeContent\": \"2511TS000051\",\n  \"phone\": \"020-111-999\",\n  \"taxId\": \"0105553039338\",\n  \"paymentChannel\": \"\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Generate Service Order (stream)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pdf/service-order?output=stream",
+              "host": ["{{baseUrl}}"],
+              "path": ["pdf", "service-order"],
+              "query": [{ "key": "output", "value": "stream" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"workOrderNo\": \"2511TS000051\",\n  \"previousWorkOrderNo\": \"\",\n  \"openDate\": \"2025-11-10T04:57:19.896Z\",\n  \"createdBy\": \"pir dev\",\n  \"customerName\": \"Chayanan Chutimamas\",\n  \"customerCode\": \"40203\",\n  \"contactName\": \"ชยานันต์ ชุติมามาศ\",\n  \"contactPhone\": \"0828488805\",\n  \"workOrderType\": \"ซ่อมและเปลี่ยนสาร\",\n  \"productName\": \"เครื่องกรองน้ำ S19-90-20MIX\",\n  \"productCode\": \"30-0026-F\",\n  \"serialNo\": \"Test90001218\",\n  \"serviceCenter\": \"ศูนย์บริการนวมินทร์\",\n  \"serviceDate\": \"2025-11-09T17:00:00.000Z\",\n  \"serviceTime\": \"08:00\",\n  \"actionPerformed\": \"test\",\n  \"customerAdvice\": \"test\",\n  \"preInstallData\": { \"waterPressure\": \"1\", \"chlorine\": \"1\", \"tds\": \"1\", \"hardness\": \"1\", \"airPressure\": \"1\", \"waterTemp\": \"1\", \"ph\": \"1\" },\n  \"postInstallData\": { \"waterPressure\": \"1\", \"chlorine\": \"1\", \"tds\": \"1\", \"hardness\": \"1\", \"airPressure\": \"1\", \"waterTemp\": \"1\", \"ph\": \"1\" },\n  \"technicianName\": \"ปอนด์ที่ส่งP1ได้ เทส\",\n  \"technicianWarehouse\": \"WBS-EC-A33\",\n  \"costs\": { \"productCost\": 179, \"serviceFee\": 168.3, \"installationFee\": 99, \"travelCost\": 148.5, \"otherCost\": 198, \"totalCost\": 613.8 },\n  \"checklist\": [\n    { \"no\": 1, \"description\": \"ช่างได้แสดงบัตรประจำตัวพนักงาน\", \"checked\": true },\n    { \"no\": 2, \"description\": \"ช่างได้ชี้แจงวัตถุประสงค์\", \"checked\": false }\n  ],\n  \"qrCodeContent\": \"2511TS000051\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Download Service Order",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type is PDF', () => {",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{lastServiceOrderUrl}}",
+              "host": ["{{lastServiceOrderUrl}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "File Not Found (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/pdf/files/nonexistent-file.pdf",
+          "host": ["{{baseUrl}}"],
+          "path": ["pdf", "files", "nonexistent-file.pdf"]
+        }
+      }
+    },
+    {
+      "name": "Validation Error (empty body)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/pdf/borrowing-slip",
+          "host": ["{{baseUrl}}"],
+          "path": ["pdf", "borrowing-slip"]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
+    }
+  ]
+}

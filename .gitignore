@@ -1,0 +1,23 @@
+# compiled output
+/dist
+/node_modules
+/build
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+
+# env
+.env
+.env.*
+
+# debug
+npm-debug.log*
+
+# generated PDFs (auto-purged after 24h)
+/output

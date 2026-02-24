@@ -1,0 +1,79 @@
+{
+  "documentNo": "2511BR000245",
+  "documentType": "ใบยืมหลัก",
+  "customerName": "Natthapong Maiwan",
+  "productName": "เครื่องกรองน้ำ S38-122-100LM",
+  "productCode": "30-3280-F",
+  "workOrderNo": "2511TS000162",
+  "workOrderType": "ซ่อมและเปลี่ยนสาร",
+  "runDate": "2025-11-18T00:00:00.000Z",
+  "technicianName": "Nut Gundamas",
+  "technicianWarehouse": "WBS-UPC-KK01",
+  "openDate": "2025-11-18T00:00:00.000Z",
+  "serviceCenter": "KK",
+  "managedBy": "pir dev",
+  "senderWarehouse": "คุณสุปรีชา ร้อยพา",
+  "receiverWarehouse": "คุณสุปรีชา ร้อยพา",
+  "parts": [
+    {
+      "matUnitId": "M1-83468-F",
+      "matName": "สารกรองแมงกานีส บรรจุถุง 7 ลิตร ขายพร้อมเครื่องกรองใหญ่",
+      "borrowed": 4,
+      "issued": 4,
+      "free": null,
+      "sold": 1,
+      "remaining": 0,
+      "returned": null,
+      "unitPrice": 470.0,
+      "salePrice": 470.0
+    },
+    {
+      "matUnitId": "60-6823-F",
+      "matName": "เกลือล้างสารกรองเรซิ่น บรรจุถุง 160g (For 3นิ้ว)",
+      "borrowed": 4,
+      "issued": 4,
+      "free": null,
+      "sold": 2,
+      "remaining": 0,
+      "returned": null,
+      "unitPrice": 100.0,
+      "salePrice": 200.0
+    },
+    {
+      "matUnitId": "M2-80182-F",
+      "matName": "สารกรองคาร์บอน บรรจุถุง 10 ลิตร ขายพร้อมเครื่องกรองใหญ่",
+      "borrowed": 4,
+      "issued": 3,
+      "free": null,
+      "sold": 1,
+      "remaining": 0,
+      "returned": null,
+      "unitPrice": 1000.0,
+      "salePrice": 1000.0
+    },
+    {
+      "matUnitId": "M0-80182-F",
+      "matName": "สารกรองคาร์บอน บรรจุถุง 5 ลิตร ขายพร้อมเครื่องกรองใหญ่",
+      "borrowed": 3,
+      "issued": 3,
+      "free": null,
+      "sold": 1,
+      "remaining": 0,
+      "returned": null,
+      "unitPrice": 520.0,
+      "salePrice": 520.0
+    },
+    {
+      "matUnitId": "M2-73838-F",
+      "matName": "สารกรองแอนทราไซด์บรรจุถุง 10 ลิตร ขายพร้อมเครื่องกรองใหญ่",
+      "borrowed": 3,
+      "issued": 3,
+      "free": null,
+      "sold": 1,
+      "remaining": 0,
+      "returned": null,
+      "unitPrice": 950.0,
+      "salePrice": 950.0
+    }
+  ]
+}

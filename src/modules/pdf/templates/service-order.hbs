@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  {{> styles}}
+</head>
+<body>
+  <!-- PAGE 1 -->
+  <div class="page">
+    {{> header title="ใบสั่งงานบริการ" logoBase64=logoBase64 qrCodeDataUri=qrCodeDataUri phone=phone taxId=taxId}}
+
+    <!-- Single bordered table for ALL content -->
+    <table class="info-table">
+      <tr>
+        <td class="label">เลขที่ใบสั่งงาน</td>
+        <td class="value">{{workOrderNo}}</td>
+        <td class="label">เลขที่ใบสั่งงานเก่า</td>
+        <td class="value">{{valueOrDash previousWorkOrderNo}}</td>
+      </tr>
+      <tr>
+        <td class="label">ผู้จัดทำใบสั่งงาน</td>
+        <td class="value">{{createdBy}}</td>
+        <td class="label">วันที่เปิดใบสั่งงาน</td>
+        <td class="value">{{dateFormat openDate}}</td>
+      </tr>
+      <tr>
+        <td class="label">ประเภทงาน</td>
+        <td class="value">{{workOrderType}}</td>
+        <td class="label">ชื่อลูกค้า</td>
+        <td class="value">{{customerName}}</td>
+      </tr>
+      <tr>
+        <td class="label">ชื่อสินค้า</td>
+        <td class="value">{{productName}}</td>
+        <td class="label">Customer Code</td>
+        <td class="value">{{customerCode}}</td>
+      </tr>
+      <tr>
+        <td class="label">รหัสสินค้า</td>
+        <td class="value">{{productCode}}</td>
+        <td class="label">ชื่อผู้ติดต่อ</td>
+        <td class="value">{{contactName}}</td>
+      </tr>
+      <tr>
+        <td class="label">Serial No</td>
+        <td class="value">{{serialNo}}</td>
+        <td class="label">เบอร์ผู้ติดต่อ</td>
+        <td class="value">{{contactPhone}}</td>
+      </tr>
+      <tr>
+        <td class="label">สถานที่ซื้อ</td>
+        <td class="value">{{valueOrDash purchaseLocation}}</td>
+        <td class="label">ศูนย์บริการ</td>
+        <td class="value">{{serviceCenter}}</td>
+      </tr>
+      <tr>
+        <td class="label">วันที่ซื้อสินค้า</td>
+        <td class="value">{{valueOrDash (dateFormat purchaseDate)}}</td>
+        <td class="label">วันที่นัดบริการ</td>
+        <td class="value">{{dateFormat serviceDate}}</td>
+      </tr>
+      <tr>
+        <td class="label">วันที่ติดตั้ง</td>
+        <td class="value">{{valueOrDash (dateFormat installDate)}}</td>
+        <td class="label">เวลาที่นัดบริการ</td>
+        <td class="value">{{serviceTime}}</td>
+      </tr>
+      <tr>
+        <td class="label-wrap">ที่อยู่สินค้า/<br/>สถานที่ติดตั้ง<br/>สินค้า</td>
+        <td class="value">{{productAddress}}</td>
+        <td class="label-wrap">ที่อยู่สำหรับออก<br/>ใบกำกับภาษี</td>
+        <td class="value">{{valueOrDash (or receiveAddress taxInvoiceAddress)}}</td>
+      </tr>
+
+      <!-- Text sections (label + value spanning 3 cols) -->
+      <tr>
+        <td class="label">อาการเบื้องต้น</td>
+        <td class="value" colspan="3">{{valueOrDash initialSymptom}}</td>
+      </tr>
+      <tr>
+        <td class="label-wrap">สิ่งที่ดำเนิน<br/>การให้ลูกค้า</td>
+        <td class="value" colspan="3">{{actionPerformed}}</td>
+      </tr>
+      <tr>
+        <td class="label-wrap">คำแนะนำที่ให้<br/>ลูกค้า</td>
+        <td class="value" colspan="3">{{customerAdvice}}</td>
+      </tr>
+
+      <!-- Installation data (4 columns) -->
+      <tr>
+        <td class="label-wrap">ข้อมูลจุดติดตั้ง<br/>ก่อนเริ่มงาน</td>
+        <td class="value"><div class="install-data">ค่าแรงดันน้ำ: {{preInstallData.waterPressure}} ค่าคลอรีน: {{preInstallData.chlorine}} ค่า TDS: {{preInstallData.tds}}<br/>ค่า Hardness: {{preInstallData.hardness}} ค่าแรงดันลม: {{preInstallData.airPressure}} อุณหภูมิน้ำ: {{preInstallData.waterTemp}} ค่า PH: {{preInstallData.ph}}</div></td>
+        <td class="label-wrap">ข้อมูลจุดติดตั้ง<br/>หลังเริ่มงาน</td>
+        <td class="value"><div class="install-data">ค่าแรงดันน้ำ: {{postInstallData.waterPressure}} ค่าคลอรีน: {{postInstallData.chlorine}} ค่า TDS: {{postInstallData.tds}}<br/>ค่า Hardness: {{postInstallData.hardness}} ค่าแรงดันลม: {{postInstallData.airPressure}} อุณหภูมิน้ำ: {{postInstallData.waterTemp}} ค่า PH: {{postInstallData.ph}}</div></td>
+      </tr>
+
+      <!-- Bottom section: Technician (left) + Costs (right) with rowspan -->
+      <tr>
+        <td class="label-wrap">ชื่อช่าง<br/>(รหัสคลังช่าง)</td>
+        <td class="value">{{technicianName}}<br/>{{technicianWarehouse}}</td>
+        <td class="label" rowspan="5" style="vertical-align:top;">ค่าใช้จ่าย</td>
+        <td class="value" rowspan="5" style="padding:0;">
+          <table class="cost-inner">
+            <tr>
+              <td class="cost-name">ค่าสินค้า</td>
+              <td class="cost-amount">{{numberFormat costs.productCost 2}}</td>
+              <td class="cost-unit">บาท</td>
+            </tr>
+            <tr>
+              <td class="cost-name">ค่าบริการ</td>
+              <td class="cost-amount">{{numberFormat costs.serviceFee 2}}</td>
+              <td class="cost-unit">บาท</td>
+            </tr>
+            <tr>
+              <td class="cost-name">ค่าติดตั้ง</td>
+              <td class="cost-amount">{{numberFormat costs.installationFee 2}}</td>
+              <td class="cost-unit">บาท</td>
+            </tr>
+            <tr>
+              <td class="cost-name">ค่าเดินทาง</td>
+              <td class="cost-amount">{{numberFormat costs.travelCost 2}}</td>
+              <td class="cost-unit">บาท</td>
+            </tr>
+            <tr>
+              <td class="cost-name">ค่าใช้จ่ายอื่นๆ</td>
+              <td class="cost-amount">{{numberFormat costs.otherCost 2}}</td>
+              <td class="cost-unit">บาท</td>
+            </tr>
+            <tr>
+              <td class="cost-name">ค่าใช้จ่ายสุทธิ</td>
+              <td class="cost-amount">{{numberFormat costs.totalCost 2}}</td>
+              <td class="cost-unit">บาท</td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">เลขที่ใบยืม</td>
+        <td class="value">{{valueOrDash borrowSlipNos}}</td>
+      </tr>
+      <tr>
+        <td class="label">เลขที่ใบเสนอราคา</td>
+        <td class="value">{{valueOrDash quotationNo}}</td>
+      </tr>
+      <tr>
+        <td class="label">ผลประเมินงาน</td>
+        <td class="value">{{valueOrDash evaluationResult}}</td>
+      </tr>
+      <tr>
+        <td class="label">ช่างผู้ประเมิน</td>
+        <td class="value">{{valueOrDash evaluator}}</td>
+      </tr>
+
+      <!-- Payment + Signature row -->
+      <tr>
+        <td class="no-border"></td>
+        <td class="no-border"></td>
+        <td class="label">ช่องทางชำระ</td>
+        <td class="value">{{valueOrDash paymentChannel}}</td>
+      </tr>
+      <tr>
+        <td class="label">เวลาการทำงาน</td>
+        <td class="value" style="font-size:11px;">
+          ออกเดินทาง&nbsp;&nbsp;{{valueOrDash (dateFormat travelStartTime)}}<br/>
+          เริ่มงาน&nbsp;&nbsp;{{valueOrDash (dateFormat workStartTime)}}<br/>
+          จบงาน&nbsp;&nbsp;{{valueOrDash (dateFormat workEndTime)}}
+        </td>
+        <td class="label">ลายเซ็นลูกค้า</td>
+        <td class="value" style="text-align:center; vertical-align:middle;">
+          {{#if customerSignatureUrl}}
+            <img src="{{customerSignatureUrl}}" alt="ลายเซ็น" style="max-height:50px;" />
+          {{else}}
+            <div style="height:50px;"></div>
+          {{/if}}
+        </td>
+      </tr>
+    </table>
+
+    <div class="page-footer">1 of 2</div>
+  </div>
+
+  <!-- PAGE 2 -->
+  <div class="page page-break">
+    {{> header title="ใบสั่งงานบริการ" logoBase64=logoBase64 qrCodeDataUri=qrCodeDataUri phone=phone taxId=taxId}}
+
+    <!-- Checklist -->
+    <div class="section-title-plain">รายการ ที่ช่างปฏิบัติตามข้อกำหนด</div>
+    <table class="checklist-table">
+      {{#each checklist}}
+      <tr>
+        <td class="check-col">{{#if this.checked}}ใช่{{/if}}</td>
+        <td>{{this.no}}. {{this.description}}</td>
+      </tr>
+      {{/each}}
+    </table>
+
+    <!-- Customer Signature -->
+    <div class="signature-section" style="margin-top:30px;">
+      <div class="signature-label">ลายเซ็นลูกค้า</div>
+      {{#if customerSignatureUrl}}
+        <img class="signature-img" src="{{customerSignatureUrl}}" alt="ลายเซ็น" />
+      {{else}}
+        <div class="signature-line"></div>
+      {{/if}}
+    </div>
+
+    <div class="page-footer">2 of 2</div>
+  </div>
+</body>
+</html>

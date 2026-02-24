@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  {{> styles}}
+</head>
+<body>
+  <div class="page">
+    {{> header title="ใบยืมสินค้า/อะไหล่" logoBase64=logoBase64}}
+
+    <!-- Document Number -->
+    <div class="doc-meta-row">
+      <div></div>
+      <div class="doc-meta-right">
+        <div class="doc-number">{{documentNo}}</div>
+        <div class="doc-type">{{documentType}}</div>
+      </div>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="info-grid">
+      <div class="info-row">
+        <span class="info-label">ชื่อลูกค้า</span>
+        <span class="info-value">{{customerName}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">ชื่อช่าง (รหัสคลังช่าง)</span>
+        <span class="info-value">{{technicianName}} - ({{technicianWarehouse}})</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">ชื่อสินค้า</span>
+        <span class="info-value">{{productName}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">วันที่เปิดใบยืม</span>
+        <span class="info-value">{{dateFormat openDate}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">รหัสสินค้า</span>
+        <span class="info-value">{{productCode}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">ศูนย์บริการ</span>
+        <span class="info-value">{{serviceCenter}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">เลขที่ใบสั่งงาน</span>
+        <span class="info-value">{{workOrderNo}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">ช่างผู้จัดใบยืม</span>
+        <span class="info-value">{{managedBy}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">ประเภทใบงาน</span>
+        <span class="info-value">{{workOrderType}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">ชื่อคลังผู้จ่ายของ</span>
+        <span class="info-value">{{senderWarehouse}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">วันที่ที่วิ่งงาน</span>
+        <span class="info-value">{{dateFormat runDate}}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">ชื่อคลังผู้รับคืน</span>
+        <span class="info-value">{{receiverWarehouse}}</span>
+      </div>
+    </div>
+
+    <!-- Parts Table -->
+    <div class="section-title">อะไหล่ที่ยืม</div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:75px;">MAT Unit<br/>ID</th>
+          <th>MAT Name</th>
+          <th style="width:32px;">ยืม</th>
+          <th style="width:32px;">จ่าย</th>
+          <th style="width:32px;">ฟรี</th>
+          <th style="width:32px;">ขาย</th>
+          <th style="width:36px;">คง<br/>ค้าง</th>
+          <th style="width:32px;">คืน</th>
+          <th style="width:60px;">ราคา/<br/>หน่วย</th>
+          <th style="width:60px;">ราคา<br/>ขาย</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each parts}}
+        <tr>
+          <td>{{this.matUnitId}}</td>
+          <td>{{this.matName}}</td>
+          <td class="text-center">{{valueOrDash this.borrowed}}</td>
+          <td class="text-center">{{valueOrDash this.issued}}</td>
+          <td class="text-center">{{valueOrDash this.free}}</td>
+          <td class="text-center">{{valueOrDash this.sold}}</td>
+          <td class="text-center">{{this.remaining}}</td>
+          <td class="text-center">{{valueOrDash this.returned}}</td>
+          <td class="text-right">{{numberFormat this.unitPrice 2}}</td>
+          <td class="text-right">{{numberFormat this.salePrice 2}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+
+    <div class="page-footer">1 of 1</div>
+  </div>
+</body>
+</html>
