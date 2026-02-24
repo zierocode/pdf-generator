@@ -56,7 +56,8 @@ export class PdfController {
         data: body.data ?? {},
       });
 
-      const label = body.template ?? 'document';
+      // Sanitise label — strip characters unsafe in HTTP header values and filenames
+      const label = (body.template ?? 'document').replace(/[^a-zA-Z0-9\-_]/g, '_');
 
       if (output === 'stream') {
         res.set({
@@ -80,8 +81,9 @@ export class PdfController {
       });
     } catch (error) {
       if (error instanceof BadRequestException || error instanceof NotFoundException) throw error;
-      this.logger.error(`Render failed: ${error.message}`, error.stack);
-      throw new HttpException(error.message || 'PDF generation failed', HttpStatus.INTERNAL_SERVER_ERROR);
+      const msg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Render failed: ${msg}`, error instanceof Error ? error.stack : undefined);
+      throw new HttpException(msg || 'PDF generation failed', HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

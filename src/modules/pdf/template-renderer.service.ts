@@ -213,8 +213,8 @@ export class TemplateRendererService implements OnModuleInit {
       /(?:src|href)="\/assets\/([^"]+)"/g,
       (match, assetPath: string) => {
         const filePath = path.join(this.assetsDir, assetPath);
-        // Path traversal guard
-        if (!filePath.startsWith(this.assetsDir) || !fs.existsSync(filePath)) {
+        // Path traversal guard — use separator suffix to prevent /assets-evil/ bypass
+        if (!filePath.startsWith(this.assetsDir + path.sep) || !fs.existsSync(filePath)) {
           return match;
         }
         const ext = path.extname(filePath).slice(1).toLowerCase();

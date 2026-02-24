@@ -49,27 +49,33 @@ export class FileStorageService implements OnModuleInit {
 
   /**
    * Delete files older than MAX_AGE_MS.
+   * Runs async to avoid blocking the event loop; errors per-file are caught individually.
    */
-  private purgeOldFiles() {
-    if (!fs.existsSync(OUTPUT_DIR)) return;
+  private async purgeOldFiles(): Promise<void> {
+    try {
+      const files = await fs.promises.readdir(OUTPUT_DIR);
+      const now = Date.now();
+      let purged = 0;
 
-    const now = Date.now();
-    let purged = 0;
-
-    for (const file of fs.readdirSync(OUTPUT_DIR)) {
-      if (!file.endsWith('.pdf')) continue;
-
-      const filePath = path.join(OUTPUT_DIR, file);
-      const stat = fs.statSync(filePath);
-
-      if (now - stat.mtimeMs > MAX_AGE_MS) {
-        fs.unlinkSync(filePath);
-        purged++;
+      for (const file of files) {
+        if (!file.endsWith('.pdf')) continue;
+        const filePath = path.join(OUTPUT_DIR, file);
+        try {
+          const stat = await fs.promises.stat(filePath);
+          if (now - stat.mtimeMs > MAX_AGE_MS) {
+            await fs.promises.unlink(filePath);
+            purged++;
+          }
+        } catch {
+          // File may have been deleted between readdir and stat/unlink — safe to skip
+        }
       }
-    }
 
-    if (purged > 0) {
-      this.logger.log(`Purged ${purged} expired PDF file(s)`);
+      if (purged > 0) {
+        this.logger.log(`Purged ${purged} expired PDF file(s)`);
+      }
+    } catch (err) {
+      this.logger.warn(`purgeOldFiles error: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 }

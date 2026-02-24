@@ -186,6 +186,9 @@ This block is extracted and passed directly to Puppeteer, then stripped from the
 | `CORS_ORIGINS` | *(empty)* | Allowed CORS origins (comma-separated) — empty = allow all |
 | `THROTTLE_TTL` | `60` | Rate limit window (seconds) |
 | `THROTTLE_LIMIT` | `30` | Max requests per window |
+| `PDF_MAX_CONCURRENT` | `5` | Max Chrome pages open simultaneously (see sizing guide in `.env.example`) |
+| `PDF_MAX_QUEUE` | `20` | Max requests queued while all slots are busy (returns 503 when full) |
+| `PDF_QUEUE_TIMEOUT_MS` | `60000` | How long a queued request waits before timing out (ms) |
 
 ```bash
 cp .env.example .env

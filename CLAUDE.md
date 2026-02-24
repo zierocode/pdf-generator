@@ -195,7 +195,9 @@ POST /pdf/render { template, data }
 
 - `X-API-Key` header → `PDF_API_KEY` env var. Empty = dev mode (no auth).
 - Helmet, rate limiting (30 req/60s), CORS configurable via env vars.
-- Path traversal protection in `inlineImages()` and `FileStorageService`.
+- **Path traversal** — `inlineImages()` uses `startsWith(assetsDir + path.sep)` to prevent `/assets-evil/` bypass; `FileStorageService.resolve()` uses `path.basename()`.
+- **Header injection** — `Content-Disposition` label is sanitised (`[^a-zA-Z0-9\-_]` → `_`) before use in HTTP headers.
+- **`purgeOldFiles()`** — fully async (`fs.promises`) with per-file try/catch; never crashes the interval on TOCTOU races.
 
 ## Gotchas
 
