@@ -1,25 +1,13 @@
 {
   "info": {
-    "name": "PDF Generator — Mazuma MVP",
-    "description": "In-house PDF Generation Service สำหรับ Mazuma\n\nFeatures:\n- GrapesJS Template Editor — visual drag-and-drop template builder\n- API Key authentication (X-API-Key header)\n- Template CRUD, Preview, and Render\n\n## Endpoints\n\n### Health\n- **GET /health** — health check\n\n### Templates (requires X-API-Key)\n- **GET /api/templates** — list all templates\n- **GET /api/templates/:id** — get template by id\n- **POST /api/templates** — create template\n- **PUT /api/templates/:id** — update template\n- **DELETE /api/templates/:id** — delete template\n- **POST /api/templates/preview** — preview PDF from raw HTML/CSS + data\n- **POST /api/templates/:id/render** — render saved template to PDF\n\n### PDF Generation (requires X-API-Key)\n- **POST /pdf/borrowing-slip** — generate borrowing slip PDF from data (uses .hbs template with dynamic parts table)\n- **POST /pdf/service-order** — generate service order PDF from data (uses .hbs template with dynamic checklist)\n- **GET /pdf/files/:fileName** — download previously generated PDF\n\nQuery param `?output=stream` returns PDF binary directly instead of saving to file.",
+    "_postman_id": "pdf-generator-mazuma-v1",
+    "name": "PDF Generator — Mazuma",
+    "description": "In-house PDF generation service for Mazuma Service Co., Ltd.\n\n**Base URL:** `{{baseUrl}}` (default: http://localhost:3000)\n\n**Auth:** Set `X-API-Key` header = `{{apiKey}}`. Leave blank in dev mode (when PDF_API_KEY env var is not set).\n\n**Endpoints:**\n- `POST /pdf/render` — render named template or raw HTML\n  - Default: save to disk → JSON `{ success, fileName, fileUrl, fileSize }` (201)\n  - `?output=stream` → PDF binary stream (200)\n- `GET /pdf/files/:fileName` — download a previously saved PDF",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:3000",
-      "type": "string"
-    },
-    {
-      "key": "apiKey",
-      "value": "",
-      "type": "string"
-    },
-    {
-      "key": "lastTemplateId",
-      "value": "",
-      "type": "string"
-    }
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "apiKey", "value": "", "type": "string", "description": "Set PDF_API_KEY env var value here. Leave blank for dev mode." }
   ],
   "item": [
     {
@@ -27,373 +15,171 @@
       "item": [
         {
           "name": "Health Check",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Status is ok', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json.status).to.eql('ok');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/health",
-              "host": ["{{baseUrl}}"],
-              "path": ["health"]
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] },
+            "description": "Ping the server. No auth required. Useful for uptime monitoring."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\"status\":\"ok\"}"
             }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ใบยืมสินค้า/อะไหล่",
+      "item": [
+        {
+          "name": "Render → Save to File",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}", "description": "Omit or leave blank in dev mode" }
+            ],
+            "url": { "raw": "{{baseUrl}}/pdf/render", "host": ["{{baseUrl}}"], "path": ["pdf", "render"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"borrowing-slip\",\n  \"data\": {\n    \"documentNo\": \"2511BR000245\",\n    \"documentType\": \"ใบยืมหลัก\",\n    \"customerName\": \"Natthapong Maiwan\",\n    \"productName\": \"เครื่องกรองน้ำ S38-122-100LM\",\n    \"productCode\": \"30-3280-F\",\n    \"workOrderNo\": \"2511TS000162\",\n    \"workOrderType\": \"ซ่อมและเปลี่ยนสาร\",\n    \"runDate\": \"2025-11-18T00:00:00.000Z\",\n    \"technicianName\": \"Nut Gundamas\",\n    \"technicianWarehouse\": \"WBS-UPC-KK01\",\n    \"openDate\": \"2025-11-18T00:00:00.000Z\",\n    \"serviceCenter\": \"KK\",\n    \"managedBy\": \"pir dev\",\n    \"senderWarehouse\": \"คุณสุปรีชา ร้อยพา\",\n    \"receiverWarehouse\": \"คุณสุปรีชา ร้อยพา\",\n    \"parts\": [\n      {\n        \"matUnitId\": \"M1-83468-F\",\n        \"matName\": \"สารกรองแมงกานีส บรรจุถุง 7 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n        \"borrowed\": 4,\n        \"issued\": 4,\n        \"free\": null,\n        \"sold\": 1,\n        \"remaining\": 0,\n        \"returned\": null,\n        \"unitPrice\": 470.00,\n        \"salePrice\": 470.00\n      },\n      {\n        \"matUnitId\": \"60-6823-F\",\n        \"matName\": \"เกลือล้างสารกรองเรซิ่น บรรจุถุง 160g (For 3นิ้ว)\",\n        \"borrowed\": 4,\n        \"issued\": 4,\n        \"free\": null,\n        \"sold\": 2,\n        \"remaining\": 0,\n        \"returned\": null,\n        \"unitPrice\": 100.00,\n        \"salePrice\": 200.00\n      },\n      {\n        \"matUnitId\": \"M2-80182-F\",\n        \"matName\": \"สารกรองคาร์บอน บรรจุถุง 10 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n        \"borrowed\": 4,\n        \"issued\": 3,\n        \"free\": null,\n        \"sold\": 1,\n        \"remaining\": 0,\n        \"returned\": null,\n        \"unitPrice\": 1000.00,\n        \"salePrice\": 1000.00\n      },\n      {\n        \"matUnitId\": \"M0-80182-F\",\n        \"matName\": \"สารกรองคาร์บอน บรรจุถุง 5 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n        \"borrowed\": 3,\n        \"issued\": 3,\n        \"free\": null,\n        \"sold\": 1,\n        \"remaining\": 0,\n        \"returned\": null,\n        \"unitPrice\": 520.00,\n        \"salePrice\": 520.00\n      },\n      {\n        \"matUnitId\": \"M2-73838-F\",\n        \"matName\": \"สารกรองแอนทราไซด์บรรจุถุง 10 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n        \"borrowed\": 3,\n        \"issued\": 3,\n        \"free\": null,\n        \"sold\": 1,\n        \"remaining\": 0,\n        \"returned\": null,\n        \"unitPrice\": 950.00,\n        \"salePrice\": 950.00\n      }\n    ]\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Renders ใบยืมสินค้า/อะไหล่ and saves PDF to disk. Returns JSON with `fileUrl` to download the result.\n\n**null values** for `free`/`returned` will render as `—` (via `valueOrDash` helper)."
+          },
+          "response": [
+            {
+              "name": "201 Created — File saved",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"fileName\": \"borrowing-slip-abc12345-1234567890123.pdf\",\n  \"fileUrl\": \"http://localhost:3000/pdf/files/borrowing-slip-abc12345-1234567890123.pdf\",\n  \"fileSize\": 135000\n}"
+            }
+          ]
+        },
+        {
+          "name": "Render → Stream PDF",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pdf/render?output=stream",
+              "host": ["{{baseUrl}}"],
+              "path": ["pdf", "render"],
+              "query": [{ "key": "output", "value": "stream", "description": "Returns PDF binary directly instead of saving to disk" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"borrowing-slip\",\n  \"data\": {\n    \"documentNo\": \"2511BR000245\",\n    \"documentType\": \"ใบยืมหลัก\",\n    \"customerName\": \"Natthapong Maiwan\",\n    \"productName\": \"เครื่องกรองน้ำ S38-122-100LM\",\n    \"productCode\": \"30-3280-F\",\n    \"workOrderNo\": \"2511TS000162\",\n    \"workOrderType\": \"ซ่อมและเปลี่ยนสาร\",\n    \"runDate\": \"2025-11-18T00:00:00.000Z\",\n    \"technicianName\": \"Nut Gundamas\",\n    \"technicianWarehouse\": \"WBS-UPC-KK01\",\n    \"openDate\": \"2025-11-18T00:00:00.000Z\",\n    \"serviceCenter\": \"KK\",\n    \"managedBy\": \"pir dev\",\n    \"senderWarehouse\": \"คุณสุปรีชา ร้อยพา\",\n    \"receiverWarehouse\": \"คุณสุปรีชา ร้อยพา\",\n    \"parts\": [\n      {\n        \"matUnitId\": \"M1-83468-F\",\n        \"matName\": \"สารกรองแมงกานีส บรรจุถุง 7 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n        \"borrowed\": 4,\n        \"issued\": 4,\n        \"free\": null,\n        \"sold\": 1,\n        \"remaining\": 0,\n        \"returned\": null,\n        \"unitPrice\": 470.00,\n        \"salePrice\": 470.00\n      },\n      {\n        \"matUnitId\": \"60-6823-F\",\n        \"matName\": \"เกลือล้างสารกรองเรซิ่น บรรจุถุง 160g (For 3นิ้ว)\",\n        \"borrowed\": 4,\n        \"issued\": 4,\n        \"free\": null,\n        \"sold\": 2,\n        \"remaining\": 0,\n        \"returned\": null,\n        \"unitPrice\": 100.00,\n        \"salePrice\": 200.00\n      },\n      {\n        \"matUnitId\": \"M2-80182-F\",\n        \"matName\": \"สารกรองคาร์บอน บรรจุถุง 10 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n        \"borrowed\": 4,\n        \"issued\": 3,\n        \"free\": null,\n        \"sold\": 1,\n        \"remaining\": 0,\n        \"returned\": null,\n        \"unitPrice\": 1000.00,\n        \"salePrice\": 1000.00\n      },\n      {\n        \"matUnitId\": \"M0-80182-F\",\n        \"matName\": \"สารกรองคาร์บอน บรรจุถุง 5 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n        \"borrowed\": 3,\n        \"issued\": 3,\n        \"free\": null,\n        \"sold\": 1,\n        \"remaining\": 0,\n        \"returned\": null,\n        \"unitPrice\": 520.00,\n        \"salePrice\": 520.00\n      },\n      {\n        \"matUnitId\": \"M2-73838-F\",\n        \"matName\": \"สารกรองแอนทราไซด์บรรจุถุง 10 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n        \"borrowed\": 3,\n        \"issued\": 3,\n        \"free\": null,\n        \"sold\": 1,\n        \"remaining\": 0,\n        \"returned\": null,\n        \"unitPrice\": 950.00,\n        \"salePrice\": 950.00\n      }\n    ]\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Returns PDF binary directly (200). In Postman, click **Save Response → Save to a file** to download the PDF."
           }
         }
       ]
     },
     {
-      "name": "Templates",
+      "name": "ใบสั่งงานบริการ (2 หน้า)",
       "item": [
         {
-          "name": "List Templates",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Response is array', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.be.an('array');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Render → Save to File",
           "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
+            ],
+            "url": { "raw": "{{baseUrl}}/pdf/render", "host": ["{{baseUrl}}"], "path": ["pdf", "render"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"template\": \"service-order\",\n  \"data\": {\n    \"workOrderNo\": \"2511TS000051\",\n    \"qrCodeContent\": \"2511TS000051\",\n    \"phone\": \"020-111-999\",\n    \"taxId\": \"0105553039338\",\n    \"openDate\": \"2025-11-10T04:57:19.896Z\",\n    \"createdBy\": \"pir dev\",\n    \"customerName\": \"Chayanan Chutimamas\",\n    \"customerCode\": \"40203\",\n    \"contactName\": \"ชยานันต์ ชุติมามาศ\",\n    \"contactPhone\": \"0828488805\",\n    \"workOrderType\": \"ซ่อมและเปลี่ยนสาร\",\n    \"productName\": \"เครื่องกรองน้ำ S19-90-20MIX\",\n    \"productCode\": \"30-0026-F\",\n    \"serialNo\": \"Test90001218\",\n    \"serviceCenter\": \"ศูนย์บริการนวมินทร์\",\n    \"serviceDate\": \"2025-11-09T17:00:00.000Z\",\n    \"serviceTime\": \"08:00\",\n    \"purchaseDate\": \"\",\n    \"purchaseLocation\": \"\",\n    \"installDate\": \"\",\n    \"productAddress\": \"21/89, บ้านหลวง, จอมทอง, เชียงใหม่, 50160\",\n    \"receiveAddress\": \"21349/5455 แขวง สวนจิตรลดา เขต เขตดุสิต กรุงเทพมหานคร 10300\",\n    \"taxInvoiceAddress\": \"\",\n    \"initialSymptom\": \"\",\n    \"actionPerformed\": \"ตรวจสอบและซ่อมบำรุงเครื่องกรองน้ำ\",\n    \"customerAdvice\": \"ดูแลรักษาสม่ำเสมอ\",\n    \"preInstallData\": {\n      \"waterPressure\": \"30 psi\",\n      \"chlorine\": \"0.5\",\n      \"tds\": \"450\",\n      \"hardness\": \"200\",\n      \"airPressure\": \"15 psi\",\n      \"waterTemp\": \"28\",\n      \"ph\": \"7.2\"\n    },\n    \"postInstallData\": {\n      \"waterPressure\": \"30 psi\",\n      \"chlorine\": \"0.1\",\n      \"tds\": \"13\",\n      \"hardness\": \"33\",\n      \"airPressure\": \"15 psi\",\n      \"waterTemp\": \"28\",\n      \"ph\": \"4.8\"\n    },\n    \"technicianName\": \"ปอนด์ที่ส่งP1ได้ เทส\",\n    \"technicianWarehouse\": \"WBS-EC-A33\",\n    \"borrowSlipNos\": \"2511BR000089, 2511BR000088\",\n    \"quotationNo\": \"2511QT000013\",\n    \"evaluator\": \"pir dev\",\n    \"travelStartTime\": \"2025-11-10T05:12:59.780Z\",\n    \"workStartTime\": \"2025-11-10T05:13:16.538Z\",\n    \"workEndTime\": \"2025-11-10T05:14:01.860Z\",\n    \"costs\": {\n      \"productCost\": 179,\n      \"serviceFee\": 168.3,\n      \"installationFee\": 99,\n      \"travelCost\": 148.5,\n      \"otherCost\": 198,\n      \"totalCost\": 613.8\n    },\n    \"customerSignatureUrl\": \"\",\n    \"checklist\": [\n      { \"description\": \"ช่างได้แสดงบัตรประจำตัวพนักงานและแนะนำตัวเองให้ลูกค้าตรวจสอบ\", \"checked\": true },\n      { \"description\": \"ช่างได้ชี้แจงวัตถุประสงค์ในการให้บริการครั้งนี้อย่างชัดเจน\", \"checked\": true },\n      { \"description\": \"ช่างได้ตรวจสอบพื้นที่การทำงานและเครื่องที่จะรับบริการก่อนเริ่มดำเนินการ\", \"checked\": true },\n      { \"description\": \"ช่างได้แจ้งค่าใช้จ่ายให้ลูกค้ารับทราบก่อนเริ่มปฏิบัติงานทุกครั้ง\", \"checked\": true },\n      { \"description\": \"ช่างได้ตรวจสอบความเรียบร้อยของการให้บริการร่วมกับลูกค้า\", \"checked\": true },\n      { \"description\": \"ช่างได้ทำความสะอาดบริเวณพื้นที่หน้างานของลูกค้าให้เรียบร้อยแล้ว\", \"checked\": true },\n      { \"description\": \"ช่างได้ดำเนินการปรับตั้งวาล์วน้ำและเบรกเกอร์ที่เกี่ยวข้องให้ถูกต้องครบถ้วน\", \"checked\": true },\n      { \"description\": \"ช่างได้ให้คำแนะนำและอธิบายวิธีการใช้งานเครื่องแก่ลูกค้าอย่างละเอียด\", \"checked\": true },\n      { \"description\": \"แนะนำลูกค้าปิดวาล์วน้ำเมื่อออกจากบ้านเป็นระยะเวลานาน\", \"checked\": true }\n    ]\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Renders ใบสั่งงานบริการ (2 pages) and saves PDF to disk.\n\n**Notable fields:**\n- `qrCodeContent` → server auto-generates `qrCodeDataUri` (QR code image in header)\n- `checklist` → page 2, 9 standard items\n- `null`/empty string values render as `—` via `valueOrDash` helper\n- `travelStartTime`/`workStartTime`/`workEndTime` → formatted as HH:mm (Buddhist year ignored)"
+          },
+          "response": [
+            {
+              "name": "201 Created — File saved",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"success\": true,\n  \"fileName\": \"service-order-abc12345-1234567890123.pdf\",\n  \"fileUrl\": \"http://localhost:3000/pdf/files/service-order-abc12345-1234567890123.pdf\",\n  \"fileSize\": 175000\n}"
+            }
+          ]
+        },
+        {
+          "name": "Render → Stream PDF",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
               { "key": "X-API-Key", "value": "{{apiKey}}" }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/templates",
+              "raw": "{{baseUrl}}/pdf/render?output=stream",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "templates"]
-            }
-          }
-        },
-        {
-          "name": "Get Template",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Has html field', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('html');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/templates/borrowing-slip",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "templates", "borrowing-slip"]
-            }
-          }
-        },
-        {
-          "name": "Create Template",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
-                  "pm.test('Save template id', () => {",
-                  "  const json = pm.response.json();",
-                  "  pm.expect(json).to.have.property('id');",
-                  "  pm.collectionVariables.set('lastTemplateId', json.id);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "X-API-Key", "value": "{{apiKey}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/templates",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "templates"]
+              "path": ["pdf", "render"],
+              "query": [{ "key": "output", "value": "stream" }]
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Test Template\",\n  \"html\": \"<div class=\\\"page\\\"><h1>Test</h1><p>{{customerName}}</p></div>\",\n  \"css\": \".page { padding: 8mm; }\",\n  \"projectData\": {}\n}"
-            }
-          }
-        },
-        {
-          "name": "Update Template",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "PUT",
-            "header": [
-              { "key": "X-API-Key", "value": "{{apiKey}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/templates/{{lastTemplateId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "templates", "{{lastTemplateId}}"]
+              "raw": "{\n  \"template\": \"service-order\",\n  \"data\": {\n    \"workOrderNo\": \"2511TS000051\",\n    \"qrCodeContent\": \"2511TS000051\",\n    \"phone\": \"020-111-999\",\n    \"taxId\": \"0105553039338\",\n    \"openDate\": \"2025-11-10T04:57:19.896Z\",\n    \"createdBy\": \"pir dev\",\n    \"customerName\": \"Chayanan Chutimamas\",\n    \"customerCode\": \"40203\",\n    \"contactName\": \"ชยานันต์ ชุติมามาศ\",\n    \"contactPhone\": \"0828488805\",\n    \"workOrderType\": \"ซ่อมและเปลี่ยนสาร\",\n    \"productName\": \"เครื่องกรองน้ำ S19-90-20MIX\",\n    \"productCode\": \"30-0026-F\",\n    \"serialNo\": \"Test90001218\",\n    \"serviceCenter\": \"ศูนย์บริการนวมินทร์\",\n    \"serviceDate\": \"2025-11-09T17:00:00.000Z\",\n    \"serviceTime\": \"08:00\",\n    \"purchaseDate\": \"\",\n    \"purchaseLocation\": \"\",\n    \"installDate\": \"\",\n    \"productAddress\": \"21/89, บ้านหลวง, จอมทอง, เชียงใหม่, 50160\",\n    \"receiveAddress\": \"21349/5455 แขวง สวนจิตรลดา เขต เขตดุสิต กรุงเทพมหานคร 10300\",\n    \"taxInvoiceAddress\": \"\",\n    \"initialSymptom\": \"\",\n    \"actionPerformed\": \"ตรวจสอบและซ่อมบำรุงเครื่องกรองน้ำ\",\n    \"customerAdvice\": \"ดูแลรักษาสม่ำเสมอ\",\n    \"preInstallData\": {\n      \"waterPressure\": \"30 psi\",\n      \"chlorine\": \"0.5\",\n      \"tds\": \"450\",\n      \"hardness\": \"200\",\n      \"airPressure\": \"15 psi\",\n      \"waterTemp\": \"28\",\n      \"ph\": \"7.2\"\n    },\n    \"postInstallData\": {\n      \"waterPressure\": \"30 psi\",\n      \"chlorine\": \"0.1\",\n      \"tds\": \"13\",\n      \"hardness\": \"33\",\n      \"airPressure\": \"15 psi\",\n      \"waterTemp\": \"28\",\n      \"ph\": \"4.8\"\n    },\n    \"technicianName\": \"ปอนด์ที่ส่งP1ได้ เทส\",\n    \"technicianWarehouse\": \"WBS-EC-A33\",\n    \"borrowSlipNos\": \"2511BR000089, 2511BR000088\",\n    \"quotationNo\": \"2511QT000013\",\n    \"evaluator\": \"pir dev\",\n    \"travelStartTime\": \"2025-11-10T05:12:59.780Z\",\n    \"workStartTime\": \"2025-11-10T05:13:16.538Z\",\n    \"workEndTime\": \"2025-11-10T05:14:01.860Z\",\n    \"costs\": {\n      \"productCost\": 179,\n      \"serviceFee\": 168.3,\n      \"installationFee\": 99,\n      \"travelCost\": 148.5,\n      \"otherCost\": 198,\n      \"totalCost\": 613.8\n    },\n    \"customerSignatureUrl\": \"\",\n    \"checklist\": [\n      { \"description\": \"ช่างได้แสดงบัตรประจำตัวพนักงานและแนะนำตัวเองให้ลูกค้าตรวจสอบ\", \"checked\": true },\n      { \"description\": \"ช่างได้ชี้แจงวัตถุประสงค์ในการให้บริการครั้งนี้อย่างชัดเจน\", \"checked\": true },\n      { \"description\": \"ช่างได้ตรวจสอบพื้นที่การทำงานและเครื่องที่จะรับบริการก่อนเริ่มดำเนินการ\", \"checked\": true },\n      { \"description\": \"ช่างได้แจ้งค่าใช้จ่ายให้ลูกค้ารับทราบก่อนเริ่มปฏิบัติงานทุกครั้ง\", \"checked\": true },\n      { \"description\": \"ช่างได้ตรวจสอบความเรียบร้อยของการให้บริการร่วมกับลูกค้า\", \"checked\": true },\n      { \"description\": \"ช่างได้ทำความสะอาดบริเวณพื้นที่หน้างานของลูกค้าให้เรียบร้อยแล้ว\", \"checked\": true },\n      { \"description\": \"ช่างได้ดำเนินการปรับตั้งวาล์วน้ำและเบรกเกอร์ที่เกี่ยวข้องให้ถูกต้องครบถ้วน\", \"checked\": true },\n      { \"description\": \"ช่างได้ให้คำแนะนำและอธิบายวิธีการใช้งานเครื่องแก่ลูกค้าอย่างละเอียด\", \"checked\": true },\n      { \"description\": \"แนะนำลูกค้าปิดวาล์วน้ำเมื่อออกจากบ้านเป็นระยะเวลานาน\", \"checked\": true }\n    ]\n  }\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Test Template Updated\"\n}"
-            }
-          }
-        },
-        {
-          "name": "Delete Template",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [
-              { "key": "X-API-Key", "value": "{{apiKey}}" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/templates/{{lastTemplateId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "templates", "{{lastTemplateId}}"]
-            }
-          }
-        },
-        {
-          "name": "Preview PDF",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Content-Type is PDF', () => {",
-                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "X-API-Key", "value": "{{apiKey}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/templates/preview",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "templates", "preview"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"html\": \"<div><h1>Preview Test</h1><p>{{customerName}}</p></div>\",\n  \"css\": \"body { font-family: sans-serif; }\",\n  \"data\": {\n    \"customerName\": \"ทดสอบ\"\n  }\n}"
-            }
-          }
-        },
-        {
-          "name": "Render Borrowing Slip (basic)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Content-Type is PDF', () => {",
-                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "X-API-Key", "value": "{{apiKey}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/templates/borrowing-slip/render",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "templates", "borrowing-slip", "render"]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"data\": {\n    \"documentNo\": \"2511BR000245\",\n    \"documentType\": \"ใบยืมหลัก\",\n    \"customerName\": \"Natthapong Maiwan\",\n    \"technicianName\": \"Nut Gundamas\",\n    \"technicianWarehouse\": \"WBS-UPC-KK01\",\n    \"productName\": \"เครื่องกรองน้ำ S38-122-100LM\",\n    \"openDate\": \"18/11/2568\",\n    \"productCode\": \"30-3280-F\",\n    \"serviceCenter\": \"KK\",\n    \"workOrderNo\": \"2511TS000162\",\n    \"managedBy\": \"สมชาย วิเศษ\",\n    \"workOrderType\": \"ซ่อมและเปลี่ยนสาร\",\n    \"senderWarehouse\": \"คุณสุปรีชา ร้อยพา\",\n    \"runDate\": \"18/11/2568\",\n    \"receiverWarehouse\": \"คุณสุปรีชา ร้อยพา\"\n  }\n}"
-            }
-          }
-        },
-        {
-          "name": "Render Borrowing Slip (multi-page)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Content-Type is PDF', () => {",
-                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "X-API-Key", "value": "{{apiKey}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/pdf/borrowing-slip?output=stream",
-              "host": ["{{baseUrl}}"],
-              "path": ["pdf", "borrowing-slip"],
-              "query": [
-                { "key": "output", "value": "stream" }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"documentNo\": \"2602BR000118\",\n  \"documentType\": \"ใบยืมหลัก\",\n  \"customerName\": \"ธนพล สุขสมบูรณ์\",\n  \"technicianName\": \"วีรพงษ์ แสงทอง\",\n  \"technicianWarehouse\": \"WBS-NVM-BKK02\",\n  \"productName\": \"เครื่องกรองน้ำ S38-122-100LM\",\n  \"openDate\": \"2026-02-20T00:00:00.000Z\",\n  \"productCode\": \"30-3280-F\",\n  \"serviceCenter\": \"ศูนย์บริการนวมินทร์\",\n  \"workOrderNo\": \"2602TS000087\",\n  \"managedBy\": \"พิชิต กิจเจริญ\",\n  \"workOrderType\": \"ซ่อมและเปลี่ยนสาร\",\n  \"senderWarehouse\": \"คุณสุปรีชา ร้อยพา\",\n  \"runDate\": \"2026-02-22T00:00:00.000Z\",\n  \"receiverWarehouse\": \"คุณสุปรีชา ร้อยพา\",\n  \"parts\": [\n    {\n      \"matUnitId\": \"M1-83468-F\",\n      \"matName\": \"สารกรองแมงกานีส บรรจุถุง 7 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n      \"borrowed\": 4,\n      \"issued\": 4,\n      \"free\": null,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 470.00,\n      \"salePrice\": 470.00\n    },\n    {\n      \"matUnitId\": \"60-6823-F\",\n      \"matName\": \"เกลือล้างสารกรองเรซิ่น บรรจุถุง 160g (For 3นิ้ว)\",\n      \"borrowed\": 4,\n      \"issued\": 4,\n      \"free\": null,\n      \"sold\": 2,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 100.00,\n      \"salePrice\": 200.00\n    },\n    {\n      \"matUnitId\": \"M2-80182-F\",\n      \"matName\": \"สารกรองคาร์บอน บรรจุถุง 10 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n      \"borrowed\": 4,\n      \"issued\": 3,\n      \"free\": null,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 1000.00,\n      \"salePrice\": 1000.00\n    },\n    {\n      \"matUnitId\": \"M0-80182-F\",\n      \"matName\": \"สารกรองคาร์บอน บรรจุถุง 5 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n      \"borrowed\": 3,\n      \"issued\": 3,\n      \"free\": null,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 520.00,\n      \"salePrice\": 520.00\n    },\n    {\n      \"matUnitId\": \"M2-73838-F\",\n      \"matName\": \"สารกรองแอนทราไซด์บรรจุถุง 10 ลิตร ขายพร้อมเครื่องกรองใหญ่\",\n      \"borrowed\": 3,\n      \"issued\": 3,\n      \"free\": null,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 950.00,\n      \"salePrice\": 950.00\n    },\n    {\n      \"matUnitId\": \"FILTER-001\",\n      \"matName\": \"กรองน้ำ RO Membrane 75GPD\",\n      \"borrowed\": 2,\n      \"issued\": 1,\n      \"free\": 0,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": 0,\n      \"unitPrice\": 1250.00,\n      \"salePrice\": 1500.00\n    },\n    {\n      \"matUnitId\": \"PUMP-A23\",\n      \"matName\": \"ปั๊มน้ำแรงดัน 24V DC Booster Pump\",\n      \"borrowed\": 1,\n      \"issued\": 1,\n      \"free\": 0,\n      \"sold\": 0,\n      \"remaining\": 0,\n      \"returned\": 0,\n      \"unitPrice\": 2800.00,\n      \"salePrice\": 3200.00\n    },\n    {\n      \"matUnitId\": \"VALVE-012\",\n      \"matName\": \"วาล์วไฟฟ้า Solenoid 12V\",\n      \"borrowed\": 1,\n      \"issued\": 0,\n      \"free\": 1,\n      \"sold\": 0,\n      \"remaining\": 0,\n      \"returned\": 0,\n      \"unitPrice\": 850.00,\n      \"salePrice\": 0.00\n    },\n    {\n      \"matUnitId\": \"TUBE-3M\",\n      \"matName\": \"สายน้ำ PE ขนาด 3/8 นิ้ว ยาว 3 เมตร\",\n      \"borrowed\": 3,\n      \"issued\": 2,\n      \"free\": 0,\n      \"sold\": 0,\n      \"remaining\": 1,\n      \"returned\": 0,\n      \"unitPrice\": 45.00,\n      \"salePrice\": 0.00\n    },\n    {\n      \"matUnitId\": \"SEAL-008\",\n      \"matName\": \"ซีลยาง O-Ring ชุดใหญ่ สำหรับเครื่องกรองน้ำ\",\n      \"borrowed\": 5,\n      \"issued\": 5,\n      \"free\": 0,\n      \"sold\": 0,\n      \"remaining\": 0,\n      \"returned\": 0,\n      \"unitPrice\": 35.00,\n      \"salePrice\": 0.00\n    },\n    {\n      \"matUnitId\": \"60-7201-F\",\n      \"matName\": \"ไส้กรอง PP Sediment 10 นิ้ว 5 ไมครอน\",\n      \"borrowed\": 6,\n      \"issued\": 6,\n      \"free\": null,\n      \"sold\": 3,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 85.00,\n      \"salePrice\": 255.00\n    },\n    {\n      \"matUnitId\": \"60-7202-F\",\n      \"matName\": \"ไส้กรอง GAC Granular Activated Carbon 10 นิ้ว\",\n      \"borrowed\": 3,\n      \"issued\": 3,\n      \"free\": null,\n      \"sold\": 2,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 150.00,\n      \"salePrice\": 300.00\n    },\n    {\n      \"matUnitId\": \"60-7203-F\",\n      \"matName\": \"ไส้กรอง CTO Carbon Block 10 นิ้ว 5 ไมครอน\",\n      \"borrowed\": 3,\n      \"issued\": 2,\n      \"free\": 1,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 180.00,\n      \"salePrice\": 180.00\n    },\n    {\n      \"matUnitId\": \"M3-90001-F\",\n      \"matName\": \"สารกรองเรซิ่น Resin บรรจุถุง 10 ลิตร สำหรับเครื่องกรองน้ำรุ่นใหญ่\",\n      \"borrowed\": 2,\n      \"issued\": 2,\n      \"free\": null,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 1200.00,\n      \"salePrice\": 1200.00\n    },\n    {\n      \"matUnitId\": \"80-4401-F\",\n      \"matName\": \"ข้อต่อตรง Quick Connect 3/8 นิ้ว\",\n      \"borrowed\": 10,\n      \"issued\": 8,\n      \"free\": 2,\n      \"sold\": 0,\n      \"remaining\": 0,\n      \"returned\": 0,\n      \"unitPrice\": 25.00,\n      \"salePrice\": 0.00\n    },\n    {\n      \"matUnitId\": \"80-4402-F\",\n      \"matName\": \"ข้อต่องอ Quick Connect 3/8 นิ้ว\",\n      \"borrowed\": 6,\n      \"issued\": 4,\n      \"free\": 2,\n      \"sold\": 0,\n      \"remaining\": 0,\n      \"returned\": 0,\n      \"unitPrice\": 30.00,\n      \"salePrice\": 0.00\n    },\n    {\n      \"matUnitId\": \"90-5501-F\",\n      \"matName\": \"เทปพันเกลียว PTFE Tape ขนาด 1/2 นิ้ว\",\n      \"borrowed\": 4,\n      \"issued\": 4,\n      \"free\": null,\n      \"sold\": 0,\n      \"remaining\": 0,\n      \"returned\": 0,\n      \"unitPrice\": 15.00,\n      \"salePrice\": 0.00\n    },\n    {\n      \"matUnitId\": \"70-6101-F\",\n      \"matName\": \"หัวก๊อกน้ำดื่ม Faucet สแตนเลส สำหรับเครื่องกรองน้ำ RO\",\n      \"borrowed\": 1,\n      \"issued\": 1,\n      \"free\": null,\n      \"sold\": 1,\n      \"remaining\": 0,\n      \"returned\": null,\n      \"unitPrice\": 350.00,\n      \"salePrice\": 450.00\n    }\n  ]\n}"
-            }
-          }
-        },
-        {
-          "name": "Render Service Order (multi-page)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Content-Type is PDF', () => {",
-                  "  pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "X-API-Key", "value": "{{apiKey}}" },
-              { "key": "Content-Type", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/pdf/service-order?output=stream",
-              "host": ["{{baseUrl}}"],
-              "path": ["pdf", "service-order"],
-              "query": [
-                { "key": "output", "value": "stream" }
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"workOrderNo\": \"2602TS000034\",\n  \"previousWorkOrderNo\": \"2601TS000210\",\n  \"openDate\": \"2026-02-18T09:30:00.000Z\",\n  \"createdBy\": \"พิชิต กิจเจริญ\",\n  \"customerName\": \"นายสมศักดิ์ รุ่งเรืองกิจ\",\n  \"customerCode\": \"50478\",\n  \"contactName\": \"สมศักดิ์ รุ่งเรืองกิจ\",\n  \"contactPhone\": \"0891234567\",\n  \"workOrderType\": \"ซ่อมและเปลี่ยนสาร\",\n  \"productName\": \"เครื่องกรองน้ำ S19-90-20MIX\",\n  \"productCode\": \"30-0026-F\",\n  \"serialNo\": \"MZM2568030012345\",\n  \"serviceCenter\": \"ศูนย์บริการนวมินทร์\",\n  \"serviceDate\": \"2026-02-20T00:00:00.000Z\",\n  \"serviceTime\": \"10:00\",\n  \"purchaseDate\": \"2025-06-15T00:00:00.000Z\",\n  \"purchaseLocation\": \"HomePro สาขาเมกาบางนา\",\n  \"installDate\": \"2025-06-22T00:00:00.000Z\",\n  \"productAddress\": \"99/123 หมู่บ้านพฤกษา วิลล์ 65 ซอยนวมินทร์ 70 แขวงคลองกุ่ม เขตบึงกุ่ม กรุงเทพมหานคร 10240\",\n  \"receiveAddress\": \"99/123 หมู่บ้านพฤกษา วิลล์ 65 ซอยนวมินทร์ 70 แขวงคลองกุ่ม เขตบึงกุ่ม กรุงเทพมหานคร 10240\",\n  \"taxInvoiceAddress\": \"99/123 หมู่บ้านพฤกษา วิลล์ 65 ซอยนวมินทร์ 70 แขวงคลองกุ่ม เขตบึงกุ่ม กรุงเทพมหานคร 10240\",\n  \"initialSymptom\": \"น้ำมีกลิ่นคลอรีน ระบบกรองทำงานช้าลง ค่า TDS น้ำผ่านเครื่องกรองสูงกว่าปกติ\",\n  \"actionPerformed\": \"เปลี่ยนสารกรองคาร์บอน เปลี่ยนสารกรองแมงกานีส เปลี่ยนไส้กรอง PP Sediment ล้างถังกรองทั้งหมด ตรวจวัดค่า TDS ก่อน-หลัง ปรับตั้งค่าแรงดันน้ำ\",\n  \"customerAdvice\": \"ควรเปลี่ยนไส้กรอง PP ทุก 3-6 เดือน ขึ้นอยู่กับปริมาณการใช้น้ำ ควรเปลี่ยนสารกรองทุก 12 เดือน หากน้ำมีกลิ่นหรือรสผิดปกติให้ติดต่อศูนย์บริการ\",\n  \"preInstallData\": {\n    \"waterPressure\": \"2.5 bar\",\n    \"chlorine\": \"0.8 ppm\",\n    \"tds\": \"185 ppm\",\n    \"hardness\": \"120 mg/L\",\n    \"airPressure\": \"1.2 bar\",\n    \"waterTemp\": \"28°C\",\n    \"ph\": \"7.2\"\n  },\n  \"postInstallData\": {\n    \"waterPressure\": \"3.0 bar\",\n    \"chlorine\": \"0.0 ppm\",\n    \"tds\": \"42 ppm\",\n    \"hardness\": \"15 mg/L\",\n    \"airPressure\": \"1.5 bar\",\n    \"waterTemp\": \"27°C\",\n    \"ph\": \"7.0\"\n  },\n  \"technicianName\": \"วีรพงษ์ แสงทอง\",\n  \"technicianWarehouse\": \"WBS-NVM-BKK02\",\n  \"borrowSlipNos\": \"2602BR000118, 2602BR000119\",\n  \"quotationNo\": \"2602QT000045\",\n  \"evaluationResult\": \"ผ่าน — เครื่องทำงานปกติ ค่า TDS อยู่ในเกณฑ์\",\n  \"evaluator\": \"พิชิต กิจเจริญ\",\n  \"travelStartTime\": \"2026-02-20T08:15:00.000Z\",\n  \"workStartTime\": \"2026-02-20T09:45:00.000Z\",\n  \"workEndTime\": \"2026-02-20T12:30:00.000Z\",\n  \"costs\": {\n    \"productCost\": 3140.00,\n    \"serviceFee\": 500.00,\n    \"installationFee\": 0,\n    \"travelCost\": 300.00,\n    \"otherCost\": 0,\n    \"totalCost\": 3940.00\n  },\n  \"checklist\": [\n    { \"no\": 1, \"description\": \"ช่างได้แสดงบัตรประจำตัวพนักงานและแนะนำตัวเองให้ลูกค้าตรวจสอบ\", \"checked\": true },\n    { \"no\": 2, \"description\": \"ช่างได้ชี้แจงวัตถุประสงค์ในการให้บริการครั้งนี้อย่างชัดเจน\", \"checked\": true },\n    { \"no\": 3, \"description\": \"ช่างได้ตรวจสอบพื้นที่การทำงานและเครื่องที่จะรับบริการก่อนเริ่มดำเนินการ\", \"checked\": true },\n    { \"no\": 4, \"description\": \"ช่างได้แจ้งค่าใช้จ่ายให้ลูกค้ารับทราบก่อนเริ่มปฏิบัติงานทุกครั้ง\", \"checked\": true },\n    { \"no\": 5, \"description\": \"ช่างได้ตรวจสอบความเรียบร้อยของการให้บริการร่วมกับลูกค้า\", \"checked\": true },\n    { \"no\": 6, \"description\": \"ช่างได้ทำความสะอาดบริเวณพื้นที่หน้างานของลูกค้าให้เรียบร้อยแล้ว\", \"checked\": true },\n    { \"no\": 7, \"description\": \"ช่างได้ดำเนินการปรับตั้งวาล์วน้ำและเบรกเกอร์ที่เกี่ยวข้องให้ถูกต้องครบถ้วน\", \"checked\": true },\n    { \"no\": 8, \"description\": \"ช่างได้ให้คำแนะนำและอธิบายวิธีการใช้งานเครื่องแก่ลูกค้าอย่างละเอียด\", \"checked\": true },\n    { \"no\": 9, \"description\": \"แนะนำลูกค้าปิดวาล์วน้ำเมื่อออกจากบ้านเป็นระยะเวลานาน\", \"checked\": true }\n  ],\n  \"customerSignatureUrl\": \"\",\n  \"qrCodeContent\": \"2602TS000034\",\n  \"phone\": \"020-111-999\",\n  \"taxId\": \"0105553039338\",\n  \"paymentChannel\": \"โอนผ่านธนาคาร\"\n}"
-            }
+            "description": "Returns PDF binary directly (200). In Postman, click **Save Response → Save to a file** to download."
           }
         }
       ]
     },
     {
-      "name": "Auth Tests",
+      "name": "Raw HTML",
       "item": [
         {
-          "name": "API without key (401)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
+          "name": "Render Raw HTML → Stream",
           "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/templates",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "templates"]
-            }
-          }
-        },
-        {
-          "name": "API wrong key (401)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status 401', () => pm.response.to.have.status(401));"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
+            "method": "POST",
             "header": [
-              { "key": "X-API-Key", "value": "wrong-key" }
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-API-Key", "value": "{{apiKey}}" }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/templates",
+              "raw": "{{baseUrl}}/pdf/render?output=stream",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "templates"]
-            }
+              "path": ["pdf", "render"],
+              "query": [{ "key": "output", "value": "stream" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"html\": \"<!DOCTYPE html><html lang=\\\"th\\\"><head><meta charset=\\\"utf-8\\\"><link rel=\\\"stylesheet\\\" href=\\\"/assets/pdf-base.css\\\"><style>body{padding:20mm;font-size:14px;}</style></head><body><h1>{{title}}</h1><p>สวัสดีครับ {{name}}</p><p>วันที่: {{dateFormat date}}</p></body></html>\",\n  \"data\": {\n    \"title\": \"ทดสอบ Raw HTML\",\n    \"name\": \"Mazuma\",\n    \"date\": \"2025-11-10T00:00:00.000Z\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "Pass raw HTML with optional Handlebars variables. `/assets/pdf-base.css` is available for Bai Jamjuree font + PDF conventions."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Files",
+      "item": [
+        {
+          "name": "Download Saved PDF",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-API-Key", "value": "{{apiKey}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/pdf/files/:fileName",
+              "host": ["{{baseUrl}}"],
+              "path": ["pdf", "files", ":fileName"],
+              "variable": [{ "key": "fileName", "value": "borrowing-slip-abc12345-1234567890123.pdf", "description": "fileName returned by the Save to File requests" }]
+            },
+            "description": "Downloads a previously saved PDF. Files are auto-purged after 24 hours."
           }
         }
       ]

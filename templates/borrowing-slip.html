@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <!--
+    PDF Template: ใบยืมสินค้า/อะไหล่
+    ─────────────────────────────────
+    Handlebars  (use double curly braces — shown here with backslash-escape to avoid parsing):
+      \{{var}}            variable substitution
+      \{{{var}}}          raw / no HTML escape (use for data URIs)
+      \{{#each items}}    loop
+      \{{dateFormat x}}   \{{numberFormat x 2}}   \{{valueOrDash x}}   \{{checkMark x}}
+
+    Puppeteer options — add this block anywhere in <body> to override PDF rendering defaults:
+      [script type="application/pdf-options"]
+      {
+        "footerTemplate": "<div style='font-size:9px;...'>text | <span class='pageNumber'></span> / <span class='totalPages'></span></div>",
+        "headerTemplate": "<div style='...'>custom header</div>",
+        "margin": { "top": "0", "right": "0", "bottom": "12mm", "left": "0" },
+        "landscape": false,
+        "scale": 1
+      }
+      [/script]
+      - Handlebars variables inside the JSON are already resolved (e.g. \{{documentNo}} works)
+      - footer/headerTemplate support Puppeteer classes: pageNumber, totalPages, date, title, url
+      - Omit entire block to use defaults: auto page numbers at bottom-right, 8mm bottom margin
+
+    Layout:
+      .pdf-header  position:fixed top — repeats every page; body { margin-top: Xmm }
+      .page-break  page-break-before:always
+
+    Preview: http://localhost:3000 (serves /assets/ for fonts + images)
+  -->
+  <link rel="stylesheet" href="/assets/pdf-base.css">
+  <style>
+    body {
+      margin-top: 31mm; /* = header height */
+    }
+
+    /* ===== HEADER ===== */
+    .pdf-header {
+      padding: 6px 8mm 0 8mm;
+    }
+
+    .hdr-main {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .hdr-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hdr-logo { height: 38px; width: auto; }
+
+    .company-info { display: flex; flex-direction: column; justify-content: center; }
+    .company-th { font-weight: 700; font-size: 13px; line-height: 1.3; color: #222; }
+    .company-en { font-weight: 600; font-size: 11px; line-height: 1.3; color: #444; }
+
+    .hdr-right { text-align: right; }
+
+    .doc-title  { font-size: 28px; font-weight: 700; color: #1a9e96; line-height: 1.1; white-space: nowrap; }
+    .doc-number { font-size: 15px; font-weight: 700; color: #222; margin-top: 2px; }
+    .doc-type   { font-size: 12px; color: #555; margin-top: 1px; }
+
+    .hdr-address { font-size: 10px; color: #555; line-height: 1.35; padding-bottom: 5px; }
+    .hdr-border  { height: 2px; background: #1a9e96; }
+
+    /* ===== CONTENT ===== */
+    .content { padding: 6px 8mm 8mm 8mm; }
+
+    /* ===== INFO TABLE ===== */
+    .info-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
+    .info-table td { padding: 4px 8px; vertical-align: middle; border: 1px solid #ddd; }
+    .info-table .lbl { font-weight: 600; color: #333; white-space: nowrap; background: #f0faf9; width: 130px; }
+    .info-table .val { color: #444; width: 180px; }
+
+    /* ===== SECTION TITLE ===== */
+    .section-title {
+      font-weight: 700; font-size: 13px; padding: 5px 10px; margin-bottom: 4px;
+      border-left: 4px solid #1a9e96; background: #f0faf9; color: #222;
+    }
+
+    /* ===== PARTS TABLE ===== */
+    .parts-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+
+    .parts-table th {
+      background: #1a9e96; color: #fff; font-weight: 600;
+      padding: 5px 6px; text-align: center;
+      border: 1px solid #138f88; line-height: 1.3;
+    }
+
+    .parts-table td { border: 1px solid #ccc; padding: 4px 6px; vertical-align: middle; }
+    .parts-table tbody tr:nth-child(even) td { background: #f9f9f9; }
+
+    .col-matid  { width: 80px; }
+    .col-num    { width: 34px; }
+    .col-price  { width: 62px; }
+
+    .td-matid, .td-matname { font-size: 11px; }
+    .td-num   { text-align: center; }
+    .td-price { text-align: right; white-space: nowrap; }
+
+    /* ===== FOOTER ===== */
+    .pdf-footer { font-size: 10px; color: #999; text-align: right; padding: 0 8mm 6mm; }
+  </style>
+</head>
+<body>
+
+<!-- ===== FIXED HEADER (repeats on every page) ===== -->
+<div class="pdf-header">
+  <div class="hdr-main">
+    <div class="hdr-left">
+      <img src="/assets/images/mazuma-logo.png" alt="Mazuma" class="hdr-logo">
+      <div class="company-info">
+        <div class="company-th">บริษัท มาซูม่า เซอร์วิส จำกัด</div>
+        <div class="company-en">MAZUMA SERVICE CO., LTD.</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <div class="doc-title">ใบยืมสินค้า/อะไหล่</div>
+      <div class="doc-number">{{documentNo}}</div>
+      <div class="doc-type">{{documentType}}</div>
+    </div>
+  </div>
+  <div class="hdr-address">
+    1296/9-10 ถนนกรุงเทพ-นนทบุรี แขวงบางซื่อ เขตบางซื่อ กรุงเทพฯ 10800 &nbsp;/&nbsp;
+    1296/9-10 Bangkok-Nonthaburi Rd., Bangsue, Bangsue, Bangkok 10800
+  </div>
+  <div class="hdr-border"></div>
+</div>
+
+<!-- ===== PAGE CONTENT ===== -->
+<div class="content">
+
+  <table class="info-table">
+    <tr>
+      <td class="lbl">ชื่อลูกค้า:</td>
+      <td class="val">{{customerName}}</td>
+      <td class="lbl">ชื่อช่าง (รหัสคลังช่าง):</td>
+      <td class="val">{{technicianName}} ({{technicianWarehouse}})</td>
+    </tr>
+    <tr>
+      <td class="lbl">ชื่อสินค้า:</td>
+      <td class="val">{{productName}}</td>
+      <td class="lbl">วันที่เปิดใบยืม:</td>
+      <td class="val">{{dateFormat openDate}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">รหัสสินค้า:</td>
+      <td class="val">{{productCode}}</td>
+      <td class="lbl">ศูนย์บริการ:</td>
+      <td class="val">{{serviceCenter}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">เลขที่ใบสั่งงาน:</td>
+      <td class="val">{{workOrderNo}}</td>
+      <td class="lbl">ช่างผู้จัดใบยืม:</td>
+      <td class="val">{{managedBy}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">ประเภทใบงาน:</td>
+      <td class="val">{{workOrderType}}</td>
+      <td class="lbl">ชื่อคลังผู้จ่ายของ:</td>
+      <td class="val">{{senderWarehouse}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">วันที่ที่วิ่งงาน:</td>
+      <td class="val">{{dateFormat runDate}}</td>
+      <td class="lbl">ชื่อคลังผู้รับคืน:</td>
+      <td class="val">{{receiverWarehouse}}</td>
+    </tr>
+  </table>
+
+  <div class="section-title">อะไหล่ที่ยืม</div>
+
+  <table class="parts-table">
+    <thead>
+      <tr>
+        <th class="col-matid">MAT Unit ID</th>
+        <th class="col-matname">MAT Name</th>
+        <th class="col-num">ยืม</th>
+        <th class="col-num">จ่าย</th>
+        <th class="col-num">ฟรี</th>
+        <th class="col-num">ขาย</th>
+        <th class="col-num">คง<br>ค้าง</th>
+        <th class="col-num">คืน</th>
+        <th class="col-price">ราคา/<br>หน่วย</th>
+        <th class="col-price">ราคา<br>ขาย</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each parts}}
+      <tr>
+        <td class="td-matid">{{this.matUnitId}}</td>
+        <td class="td-matname">{{this.matName}}</td>
+        <td class="td-num">{{valueOrDash this.borrowed}}</td>
+        <td class="td-num">{{valueOrDash this.issued}}</td>
+        <td class="td-num">{{valueOrDash this.free}}</td>
+        <td class="td-num">{{valueOrDash this.sold}}</td>
+        <td class="td-num">{{valueOrDash this.remaining}}</td>
+        <td class="td-num">{{valueOrDash this.returned}}</td>
+        <td class="td-price">{{numberFormat this.unitPrice 2}}</td>
+        <td class="td-price">{{numberFormat this.salePrice 2}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+</div>
+
+
+</body>
+</html>

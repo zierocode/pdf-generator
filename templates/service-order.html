@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <!--
+    PDF Template: ใบสั่งงานบริการ (2 pages)
+    ─────────────────────────────────────────
+    Handlebars  (use double curly braces — shown here with backslash-escape to avoid parsing):
+      \{{var}}            variable substitution
+      \{{{var}}}          raw / no HTML escape (use for data URIs)
+      \{{#each items}}    loop
+      \{{dateFormat x}}   \{{timeFormat x}}   \{{numberFormat x 2}}   \{{valueOrDash x}}   \{{checkMark x}}
+      qrCodeDataUri is auto-generated server-side from qrCodeContent field.
+
+    Puppeteer options — add this block anywhere in <body> to override PDF rendering defaults:
+      [script type="application/pdf-options"]
+      {
+        "footerTemplate": "<div style='font-size:9px;color:#999;width:100%;display:flex;justify-content:space-between;padding:0 8mm;font-family:sans-serif;box-sizing:border-box;'><span>WORK-ORDER-NO-VAR</span><span><span class='pageNumber'></span> / <span class='totalPages'></span></span></div>",
+        "margin": { "top": "0", "right": "0", "bottom": "12mm", "left": "0" },
+        "landscape": false,
+        "scale": 1
+      }
+      [/script]
+      - Handlebars variables inside the JSON are already resolved (workOrderNo, documentNo, etc.)
+      - footer/headerTemplate support Puppeteer classes: pageNumber, totalPages, date, title, url
+      - Omit entire block to use defaults: auto page numbers at bottom-right, 8mm bottom margin
+
+    Layout:
+      .pdf-header  position:fixed top — repeats every page; body { margin-top: Xmm }
+      .page-break  page-break-before:always
+
+    Preview: http://localhost:3000 (serves /assets/ for fonts + images)
+  -->
+  <link rel="stylesheet" href="/assets/pdf-base.css">
+  <style>
+    body {
+      margin-top: 33mm; /* = header height */
+    }
+
+    /* ===== HEADER ===== */
+    .pdf-header {
+      padding: 6px 8mm 0 8mm;
+    }
+
+    .hdr-main {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .hdr-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .hdr-logo { height: 38px; width: auto; }
+
+    .company-info { display: flex; flex-direction: column; justify-content: center; }
+    .company-th { font-weight: 700; font-size: 13px; line-height: 1.3; color: #222; }
+    .company-en { font-weight: 600; font-size: 11px; line-height: 1.3; color: #444; }
+
+    .hdr-center {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 12px;
+    }
+
+    .qr-img { width: 65px; height: 65px; }
+    .qr-placeholder { width: 65px; height: 65px; border: 1px solid #bbb; }
+
+    .hdr-right { text-align: right; flex-shrink: 0; }
+
+    .doc-title  { font-size: 28px; font-weight: 700; color: #1a9e96; line-height: 1.1; white-space: nowrap; }
+    .doc-number { font-size: 15px; font-weight: 700; color: #222; margin-top: 2px; text-align: right; }
+
+    .hdr-address {
+      font-size: 10px; color: #555; line-height: 1.35; padding-bottom: 5px;
+      display: flex; justify-content: space-between; align-items: flex-end;
+    }
+
+    .addr-text  { flex: 1; }
+    .phone-tax  { white-space: nowrap; padding-left: 12px; font-size: 12px; color: #222; }
+    .hdr-border { height: 2px; background: #1a9e96; }
+
+    /* ===== PAGE 1 CONTENT ===== */
+    .p1 { padding: 6px 8mm 6mm 8mm; }
+
+    /* ===== PAGE 2 CONTENT ===== */
+    .p2 { padding-top: 33mm; padding-left: 8mm; padding-right: 8mm; padding-bottom: 6mm; }
+
+    /* ===== INFO TABLE ===== */
+    .info-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 8px; }
+    .info-table td { border: 1px solid #bbb; padding: 4px 8px; vertical-align: top; }
+    .info-table .lbl {
+      font-weight: 600; color: #333; background: #f0faf9;
+      white-space: nowrap; width: 115px;
+    }
+    .info-table .lbl-wrap { white-space: normal; }
+    .info-table .val { color: #444; }
+
+    /* ===== PRE/POST MEASUREMENT TABLE ===== */
+    .measure-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-bottom: 8px; }
+    .measure-table th {
+      border: 1px solid #bbb; padding: 5px 8px;
+      background: #1a9e96; color: #fff; font-weight: 700; text-align: center;
+    }
+    .measure-table td { border: 1px solid #bbb; padding: 4px 8px; vertical-align: middle; }
+    .measure-lbl-col { width: 90px; }
+    .mlbl { font-weight: 600; background: #f0faf9; color: #333; white-space: nowrap; width: 90px; }
+    .mval { color: #444; }
+
+    /* ===== BOTTOM 2-COLUMN SECTION ===== */
+    .bottom-table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    .bottom-left  { width: 55%; vertical-align: top; padding-right: 8px; }
+    .bottom-right { width: 45%; vertical-align: top; padding-left: 8px; }
+
+    .tech-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+    .tech-table td { border: 1px solid #bbb; padding: 4px 8px; vertical-align: top; }
+    .tlbl { font-weight: 600; background: #f0faf9; white-space: nowrap; width: 110px; color: #333; }
+    .tval { color: #444; }
+
+    .cost-table { width: 100%; border-collapse: collapse; font-size: 11.5px; border: 1px solid #bbb; }
+    .cost-table td { padding: 4px 8px; border: 1px solid #bbb; vertical-align: middle; }
+    .cost-lbl { font-weight: 600; background: #f0faf9; white-space: nowrap; color: #333; }
+    .cost-val { text-align: right; width: 80px; white-space: nowrap; }
+    .cost-unit { font-size: 11px; color: #555; width: 26px; }
+    .cost-total-row td { border-top: 2px solid #1a9e96; font-weight: 700; }
+    .cost-total { font-size: 13px; }
+
+    /* ===== SIGNATURE TABLE ===== */
+    .sig-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .sig-box { width: 33.33%; border: 1px solid #bbb; padding: 6px 8px; text-align: center; vertical-align: bottom; }
+    .sig-area { height: 55px; display: flex; align-items: center; justify-content: center; }
+    .sig-img  { max-height: 50px; max-width: 100%; }
+    .sig-label {
+      font-weight: 600; font-size: 11.5px;
+      border-top: 1px solid #bbb; padding-top: 4px; margin-top: 4px; color: #333;
+    }
+
+    /* ===== SECTION TITLE ===== */
+    .section-title {
+      font-weight: 700; font-size: 13px; padding: 5px 10px; margin-bottom: 6px;
+      border-left: 4px solid #1a9e96; background: #f0faf9; color: #222;
+    }
+
+    /* ===== CHECKLIST TABLE ===== */
+    .checklist-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .checklist-table th {
+      background: #1a9e96; color: #fff; font-weight: 700;
+      padding: 5px 8px; border: 1px solid #138f88; text-align: center;
+    }
+    .checklist-table td { border: 1px solid #bbb; padding: 5px 8px; vertical-align: middle; }
+    .cl-num   { width: 30px; text-align: center; font-weight: 600; }
+    .cl-desc  { color: #444; }
+    .cl-check { width: 34px; text-align: center; font-size: 14px; font-weight: 700; color: #1a9e96; }
+
+    /* ===== FOOTER ===== */
+    .pdf-footer { font-size: 10px; color: #999; text-align: right; padding: 0 8mm 6mm; }
+  </style>
+</head>
+<body>
+
+<!-- ===== FIXED HEADER (repeats on every page) ===== -->
+<div class="pdf-header">
+  <div class="hdr-main">
+    <div class="hdr-left">
+      <img src="/assets/images/mazuma-logo.png" alt="Mazuma" class="hdr-logo">
+      <div class="company-info">
+        <div class="company-th">บริษัท มาซูม่า เซอร์วิส จำกัด</div>
+        <div class="company-en">MAZUMA SERVICE CO., LTD.</div>
+      </div>
+    </div>
+    <div class="hdr-center">
+      {{#if qrCodeDataUri}}
+      <img src="{{{qrCodeDataUri}}}" class="qr-img" alt="QR">
+      {{else}}
+      <div class="qr-placeholder"></div>
+      {{/if}}
+    </div>
+    <div class="hdr-right">
+      <div class="doc-title">ใบสั่งงานบริการ</div>
+      <div class="doc-number">{{workOrderNo}}</div>
+    </div>
+  </div>
+  <div class="hdr-address">
+    <span class="addr-text">
+      1296/9-10 ถนนกรุงเทพ-นนทบุรี แขวงบางซื่อ เขตบางซื่อ กรุงเทพฯ 10800 &nbsp;/&nbsp;
+      1296/9-10 Bangkok-Nonthaburi Rd., Bangsue, Bangsue, Bangkok 10800
+    </span>
+    <span class="phone-tax">
+      <strong>โทร {{phone}}</strong> &nbsp; <strong>TAX ID: {{taxId}}</strong>
+    </span>
+  </div>
+  <div class="hdr-border"></div>
+</div>
+
+<!-- ===== PAGE 1 ===== -->
+<div class="p1">
+
+  <table class="info-table">
+    <tr>
+      <td class="lbl">ผู้จัดทำใบสั่งงาน</td>
+      <td class="val">{{createdBy}}</td>
+      <td class="lbl">วันที่เปิดใบสั่งงาน</td>
+      <td class="val">{{dateFormat openDate}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">ประเภทงาน</td>
+      <td class="val">{{workOrderType}}</td>
+      <td class="lbl">ชื่อลูกค้า</td>
+      <td class="val">{{customerName}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">ชื่อสินค้า</td>
+      <td class="val">{{productName}}</td>
+      <td class="lbl">Customer Code</td>
+      <td class="val">{{customerCode}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">รหัสสินค้า</td>
+      <td class="val">{{productCode}}</td>
+      <td class="lbl">ชื่อผู้ติดต่อ</td>
+      <td class="val">{{contactName}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Serial No</td>
+      <td class="val">{{serialNo}}</td>
+      <td class="lbl">เบอร์ผู้ติดต่อ</td>
+      <td class="val">{{contactPhone}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">สถานที่ซื้อ</td>
+      <td class="val">{{valueOrDash purchaseLocation}}</td>
+      <td class="lbl">ศูนย์บริการ</td>
+      <td class="val">{{serviceCenter}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">วันที่ซื้อสินค้า</td>
+      <td class="val">{{valueOrDash purchaseDate}}</td>
+      <td class="lbl">วันที่นัดบริการ</td>
+      <td class="val">{{dateFormat serviceDate}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">วันที่ติดตั้ง</td>
+      <td class="val">{{valueOrDash installDate}}</td>
+      <td class="lbl">เวลาที่นัดบริการ</td>
+      <td class="val">{{serviceTime}}</td>
+    </tr>
+    <tr>
+      <td class="lbl lbl-wrap">ที่อยู่สินค้า/<br>สถานที่ติดตั้ง</td>
+      <td class="val" colspan="3">{{productAddress}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">ที่อยู่จัดส่งเอกสาร</td>
+      <td class="val" colspan="3">{{receiveAddress}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">ที่อยู่ใบกำกับภาษี</td>
+      <td class="val" colspan="3">{{valueOrDash taxInvoiceAddress}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">อาการที่พบ</td>
+      <td class="val" colspan="3">{{valueOrDash initialSymptom}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">สิ่งที่ดำเนินการ</td>
+      <td class="val" colspan="3">{{valueOrDash actionPerformed}}</td>
+    </tr>
+    <tr>
+      <td class="lbl">คำแนะนำลูกค้า</td>
+      <td class="val" colspan="3">{{valueOrDash customerAdvice}}</td>
+    </tr>
+  </table>
+
+  <!-- Pre/Post measurement -->
+  <table class="measure-table">
+    <thead>
+      <tr>
+        <th class="measure-lbl-col"></th>
+        <th class="measure-val-col">ข้อมูลก่อนซ่อม</th>
+        <th class="measure-lbl-col"></th>
+        <th class="measure-val-col">ข้อมูลหลังซ่อม</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="mlbl">แรงดันน้ำ</td>
+        <td class="mval">{{valueOrDash preInstallData.waterPressure}}</td>
+        <td class="mlbl">แรงดันน้ำ</td>
+        <td class="mval">{{valueOrDash postInstallData.waterPressure}}</td>
+      </tr>
+      <tr>
+        <td class="mlbl">คลอรีน</td>
+        <td class="mval">{{valueOrDash preInstallData.chlorine}}</td>
+        <td class="mlbl">คลอรีน</td>
+        <td class="mval">{{valueOrDash postInstallData.chlorine}}</td>
+      </tr>
+      <tr>
+        <td class="mlbl">TDS</td>
+        <td class="mval">{{valueOrDash preInstallData.tds}}</td>
+        <td class="mlbl">TDS</td>
+        <td class="mval">{{valueOrDash postInstallData.tds}}</td>
+      </tr>
+      <tr>
+        <td class="mlbl">ความกระด้าง</td>
+        <td class="mval">{{valueOrDash preInstallData.hardness}}</td>
+        <td class="mlbl">ความกระด้าง</td>
+        <td class="mval">{{valueOrDash postInstallData.hardness}}</td>
+      </tr>
+      <tr>
+        <td class="mlbl">แรงดันอากาศ</td>
+        <td class="mval">{{valueOrDash preInstallData.airPressure}}</td>
+        <td class="mlbl">แรงดันอากาศ</td>
+        <td class="mval">{{valueOrDash postInstallData.airPressure}}</td>
+      </tr>
+      <tr>
+        <td class="mlbl">อุณหภูมิน้ำ</td>
+        <td class="mval">{{valueOrDash preInstallData.waterTemp}}</td>
+        <td class="mlbl">อุณหภูมิน้ำ</td>
+        <td class="mval">{{valueOrDash postInstallData.waterTemp}}</td>
+      </tr>
+      <tr>
+        <td class="mlbl">pH</td>
+        <td class="mval">{{valueOrDash preInstallData.ph}}</td>
+        <td class="mlbl">pH</td>
+        <td class="mval">{{valueOrDash postInstallData.ph}}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Technician info + Costs (side by side) -->
+  <table class="bottom-table">
+    <tr>
+      <td class="bottom-left">
+        <table class="tech-table">
+          <tr>
+            <td class="tlbl">ชื่อช่าง</td>
+            <td class="tval">{{technicianName}} ({{technicianWarehouse}})</td>
+          </tr>
+          <tr>
+            <td class="tlbl">เลขที่ใบยืม</td>
+            <td class="tval">{{valueOrDash borrowSlipNos}}</td>
+          </tr>
+          <tr>
+            <td class="tlbl">เลขที่ใบเสนอราคา</td>
+            <td class="tval">{{valueOrDash quotationNo}}</td>
+          </tr>
+          <tr>
+            <td class="tlbl">เวลาเดินทาง</td>
+            <td class="tval">{{timeFormat travelStartTime}}</td>
+          </tr>
+          <tr>
+            <td class="tlbl">เวลาเริ่มงาน</td>
+            <td class="tval">{{timeFormat workStartTime}}</td>
+          </tr>
+          <tr>
+            <td class="tlbl">เวลาเสร็จงาน</td>
+            <td class="tval">{{timeFormat workEndTime}}</td>
+          </tr>
+        </table>
+      </td>
+      <td class="bottom-right">
+        <table class="cost-table">
+          <tr>
+            <td class="cost-lbl">ค่าอะไหล่/สินค้า</td>
+            <td class="cost-val">{{numberFormat costs.productCost 2}}</td>
+            <td class="cost-unit">บาท</td>
+          </tr>
+          <tr>
+            <td class="cost-lbl">ค่าบริการ</td>
+            <td class="cost-val">{{numberFormat costs.serviceFee 2}}</td>
+            <td class="cost-unit">บาท</td>
+          </tr>
+          <tr>
+            <td class="cost-lbl">ค่าติดตั้ง</td>
+            <td class="cost-val">{{numberFormat costs.installationFee 2}}</td>
+            <td class="cost-unit">บาท</td>
+          </tr>
+          <tr>
+            <td class="cost-lbl">ค่าเดินทาง</td>
+            <td class="cost-val">{{numberFormat costs.travelCost 2}}</td>
+            <td class="cost-unit">บาท</td>
+          </tr>
+          <tr>
+            <td class="cost-lbl">ค่าอื่นๆ</td>
+            <td class="cost-val">{{numberFormat costs.otherCost 2}}</td>
+            <td class="cost-unit">บาท</td>
+          </tr>
+          <tr class="cost-total-row">
+            <td class="cost-lbl">รวม</td>
+            <td class="cost-val cost-total">{{numberFormat costs.totalCost 2}}</td>
+            <td class="cost-unit">บาท</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <!-- Signatures -->
+  <table class="sig-table">
+    <tr>
+      <td class="sig-box">
+        <div class="sig-area">
+          {{#if customerSignatureUrl}}
+          <img src="{{customerSignatureUrl}}" alt="ลายเซ็นลูกค้า" class="sig-img">
+          {{/if}}
+        </div>
+        <div class="sig-label">ลายเซ็นลูกค้า</div>
+      </td>
+      <td class="sig-box">
+        <div class="sig-area"></div>
+        <div class="sig-label">ลายเซ็นช่าง</div>
+      </td>
+      <td class="sig-box">
+        <div class="sig-area"></div>
+        <div class="sig-label">ผู้ตรวจสอบ {{evaluator}}</div>
+      </td>
+    </tr>
+  </table>
+
+</div>
+
+<!-- ===== PAGE 2 ===== -->
+<div class="page-break"></div>
+
+<div class="p2">
+  <div class="section-title">รายการตรวจสอบ</div>
+
+  <table class="checklist-table">
+    <thead>
+      <tr>
+        <th class="cl-num">ที่</th>
+        <th>รายการ</th>
+        <th class="cl-check">ผล</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each checklist}}
+      <tr>
+        <td class="cl-num">{{inc @index}}</td>
+        <td class="cl-desc">{{this.description}}</td>
+        <td class="cl-check">{{checkMark this.checked}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <!-- Signatures page 2 -->
+  <table class="sig-table" style="margin-top:30px;">
+    <tr>
+      <td class="sig-box">
+        <div class="sig-area">
+          {{#if customerSignatureUrl}}
+          <img src="{{customerSignatureUrl}}" alt="ลายเซ็นลูกค้า" class="sig-img">
+          {{/if}}
+        </div>
+        <div class="sig-label">ลายเซ็นลูกค้า</div>
+      </td>
+      <td class="sig-box">
+        <div class="sig-area"></div>
+        <div class="sig-label">ลายเซ็นช่าง</div>
+      </td>
+      <td class="sig-box">
+        <div class="sig-area"></div>
+        <div class="sig-label">ผู้ตรวจสอบ {{evaluator}}</div>
+      </td>
+    </tr>
+  </table>
+</div>
+
+
+</body>
+</html>

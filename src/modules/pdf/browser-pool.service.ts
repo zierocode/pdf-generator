@@ -33,7 +33,13 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
         page.pdf({
           format: 'A4',
           printBackground: true,
-          margin: { top: '10mm', right: '10mm', bottom: '10mm', left: '10mm' },
+          margin: { top: '0', right: '0', bottom: '8mm', left: '0' },
+          displayHeaderFooter: true,
+          headerTemplate: '<span></span>',
+          footerTemplate:
+            '<div style="font-size:9px;color:#aaa;width:100%;text-align:right;' +
+            'padding-right:8mm;font-family:sans-serif;box-sizing:border-box;">' +
+            '<span class="pageNumber"></span> / <span class="totalPages"></span></div>',
           ...options,
         }),
         new Promise<never>((_, reject) =>
