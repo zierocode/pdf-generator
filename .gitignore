@@ -12,9 +12,10 @@
 # OS
 .DS_Store
 
-# env
+# env — ignore actual secrets, but track the example template
 .env
 .env.*
+!.env.example
 
 # debug
 npm-debug.log*

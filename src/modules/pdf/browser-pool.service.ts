@@ -4,25 +4,10 @@ import {
   OnModuleInit,
   OnModuleDestroy,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import puppeteer, { type Browser, type PDFOptions } from 'puppeteer';
 
 const PDF_GENERATION_TIMEOUT_MS = 30_000;
-
-/**
- * Max Chrome pages open simultaneously.
- * Each page consumes ~80-150 MB RAM (417 KB inlined CSS + Chrome subprocess).
- * Tune based on available server memory: 5 × ~120 MB ≈ 600 MB headroom.
- */
-const MAX_CONCURRENT = 5;
-
-/**
- * Max requests waiting in queue when all slots are busy.
- * Beyond this, callers receive 503 immediately instead of waiting forever.
- */
-const MAX_QUEUE = 20;
-
-/** How long a queued request will wait before giving up (ms). */
-const QUEUE_TIMEOUT_MS = 60_000;
 
 interface QueueEntry {
   resolve: () => void;
@@ -33,6 +18,19 @@ interface QueueEntry {
 @Injectable()
 export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BrowserPoolService.name);
+
+  /** Max Chrome pages open simultaneously (env: PDF_MAX_CONCURRENT, default: 5). */
+  private readonly maxConcurrent: number;
+  /** Max requests waiting in queue (env: PDF_MAX_QUEUE, default: 20). */
+  private readonly maxQueue: number;
+  /** Queue wait timeout in ms (env: PDF_QUEUE_TIMEOUT_MS, default: 60000). */
+  private readonly queueTimeoutMs: number;
+
+  constructor(private readonly config: ConfigService) {
+    this.maxConcurrent = config.get<number>('PDF_MAX_CONCURRENT') ?? 5;
+    this.maxQueue      = config.get<number>('PDF_MAX_QUEUE')      ?? 20;
+    this.queueTimeoutMs = config.get<number>('PDF_QUEUE_TIMEOUT_MS') ?? 60_000;
+  }
 
   private browser: Browser | null = null;
 
@@ -111,7 +109,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
 
   /** Returns live concurrency stats (useful for health checks / monitoring). */
   getStats() {
-    return { activePages: this.activePages, queued: this.queue.length, maxConcurrent: MAX_CONCURRENT };
+    return { activePages: this.activePages, queued: this.queue.length, maxConcurrent: this.maxConcurrent };
   }
 
   // ---------------------------------------------------------------------------
@@ -119,20 +117,20 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
   // ---------------------------------------------------------------------------
 
   private async acquireSlot(): Promise<void> {
-    if (this.activePages < MAX_CONCURRENT) {
+    if (this.activePages < this.maxConcurrent) {
       this.activePages++;
-      this.logger.debug(`Slot acquired — active: ${this.activePages}/${MAX_CONCURRENT}`);
+      this.logger.debug(`Slot acquired — active: ${this.activePages}/${this.maxConcurrent}`);
       return;
     }
 
-    if (this.queue.length >= MAX_QUEUE) {
+    if (this.queue.length >= this.maxQueue) {
       throw new Error(
-        `PDF queue full (${MAX_QUEUE} waiting) — server overloaded, try again later`,
+        `PDF queue full (${this.maxQueue} waiting) — server overloaded, try again later`,
       );
     }
 
     this.logger.warn(
-      `All ${MAX_CONCURRENT} slots busy — queuing request (queue: ${this.queue.length + 1}/${MAX_QUEUE})`,
+      `All ${this.maxConcurrent} slots busy — queuing request (queue: ${this.queue.length + 1}/${this.maxQueue})`,
     );
 
     return new Promise<void>((resolve, reject) => {
@@ -140,7 +138,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
         const idx = this.queue.indexOf(entry);
         if (idx !== -1) this.queue.splice(idx, 1);
         reject(new Error('PDF queue wait timed out — server busy'));
-      }, QUEUE_TIMEOUT_MS);
+      }, this.queueTimeoutMs);
 
       const entry: QueueEntry = { resolve, reject, timer };
       this.queue.push(entry);
@@ -155,7 +153,7 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       this.logger.debug(`Slot passed to queued request — queue remaining: ${this.queue.length}`);
     } else {
       this.activePages--;
-      this.logger.debug(`Slot released — active: ${this.activePages}/${MAX_CONCURRENT}`);
+      this.logger.debug(`Slot released — active: ${this.activePages}/${this.maxConcurrent}`);
     }
   }
 
