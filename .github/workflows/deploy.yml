@@ -17,6 +17,9 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           port: ${{ secrets.VPS_PORT || 22 }}
           script: |
+            if [ ! -d "${{ secrets.APP_DIR }}/.git" ]; then
+              git clone https://github.com/zierocode/pdf-generator.git ${{ secrets.APP_DIR }}
+            fi
             cd ${{ secrets.APP_DIR }}
             git pull origin main
             docker compose up -d --build
