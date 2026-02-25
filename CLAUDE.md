@@ -46,7 +46,18 @@ npm run lint           # ESLint + Prettier (auto-fix)
 
 # Regenerate pdf-base.css (run when fonts change)
 node scripts/build-pdf-base-css.js
+
+# Docker
+docker compose up -d --build   # Build and start
+docker compose down             # Stop
+docker compose logs -f          # Follow logs
 ```
+
+## Deployment
+
+- **Docker Compose:** `docker-compose.yml` at project root. Uses `HOST_PORT` (host) → `PORT` (container).
+- **CI/CD:** `.github/workflows/deploy.yml` — push to `main` → SSH into VPS → `git pull` + `docker compose up -d --build`.
+- **GitHub Secrets required:** `VPS_HOST`, `VPS_USER`, `VPS_PASSWORD`, `VPS_PORT`, `APP_DIR`.
 
 ## API
 

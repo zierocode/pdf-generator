@@ -218,13 +218,50 @@ All requests to `POST /pdf/render` and `GET /pdf/files/:fileName` now require `X
 ## Docker
 
 ```bash
-docker build -t pdf-generator .
+# Copy and configure env
+cp .env.example .env
 
-docker run -p 3000:3000 \
-  -e PDF_API_KEY=your-key \
-  -e CORS_ORIGINS=https://your-app.com \
-  pdf-generator
+# Build and start
+docker compose up -d --build
+
+# Stop
+docker compose down
 ```
+
+**Environment variables** — see `.env.example` for full reference. Key ones:
+
+| Variable | Description |
+|---|---|
+| `HOST_PORT` | Port exposed on the host machine (default: `3000`) |
+| `PORT` | Port the app listens on inside the container (default: `3000`) |
+| `PDF_API_KEY` | API key for all endpoints — leave empty for dev (no auth) |
+
+Generated PDFs are stored in a named Docker volume (`pdf-output`) and auto-purged after 24h.
+
+## CI/CD
+
+Pushing to `main` automatically deploys to VPS via GitHub Actions (`.github/workflows/deploy.yml`).
+
+**Required GitHub Secrets** (Settings → Secrets and variables → Actions):
+
+| Secret | Description |
+|---|---|
+| `VPS_HOST` | VPS IP or domain |
+| `VPS_USER` | SSH username |
+| `VPS_PASSWORD` | SSH password |
+| `VPS_PORT` | SSH port (usually `22`) |
+| `APP_DIR` | App directory on VPS (e.g. `/root/pdf-generator`) |
+
+**First-time VPS setup:**
+```bash
+git clone https://github.com/zierocode/pdf-generator.git /root/pdf-generator
+cd /root/pdf-generator
+cp .env.example .env
+# edit .env — set PDF_API_KEY, HOST_PORT, etc.
+docker compose up -d --build
+```
+
+After that, every `git push origin main` triggers an automatic redeploy.
 
 ---
 

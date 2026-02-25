@@ -1,0 +1,15 @@
+services:
+  pdf-generator:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${HOST_PORT:-3000}:${PORT:-3000}"
+    env_file:
+      - .env
+    volumes:
+      - pdf-output:/app/output
+    cap_add:
+      - SYS_ADMIN  # required for Chromium sandboxing inside Docker
+
+volumes:
+  pdf-output:
