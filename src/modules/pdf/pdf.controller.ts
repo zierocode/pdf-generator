@@ -49,6 +49,11 @@ export class PdfController {
       throw new BadRequestException('Either "template" or "html" must be provided');
     }
 
+    const ip = res.req.ip ?? res.req.socket.remoteAddress ?? 'unknown';
+    const mode = output === 'stream' ? 'stream' : 'save';
+    const source = body.template ? `template:${body.template}` : 'raw-html';
+    this.logger.log(`Render request — ${source} mode:${mode} ip:${ip}`);
+
     try {
       const pdfBuffer = await this.pdfService.render({
         template: body.template,
@@ -96,6 +101,8 @@ export class PdfController {
     if (!filePath) {
       throw new NotFoundException(`File "${fileName}" not found or expired`);
     }
+    const ip = res.req.ip ?? res.req.socket.remoteAddress ?? 'unknown';
+    this.logger.log(`Download: ${fileName} ip:${ip}`);
     res.download(filePath, fileName);
   }
 }

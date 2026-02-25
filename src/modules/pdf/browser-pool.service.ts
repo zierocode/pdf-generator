@@ -129,10 +129,12 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
+    const queuePosition = this.queue.length + 1;
     this.logger.warn(
-      `All ${this.maxConcurrent} slots busy — queuing request (queue: ${this.queue.length + 1}/${this.maxQueue})`,
+      `All ${this.maxConcurrent} slots busy — queuing request (queue: ${queuePosition}/${this.maxQueue})`,
     );
 
+    const queuedAt = Date.now();
     return new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         const idx = this.queue.indexOf(entry);
@@ -140,7 +142,14 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
         reject(new Error('PDF queue wait timed out — server busy'));
       }, this.queueTimeoutMs);
 
-      const entry: QueueEntry = { resolve, reject, timer };
+      const entry: QueueEntry = {
+        resolve: () => {
+          this.logger.debug(`Queued request started after ${Date.now() - queuedAt}ms wait`);
+          resolve();
+        },
+        reject,
+        timer,
+      };
       this.queue.push(entry);
     });
   }
@@ -166,10 +175,11 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
 
     // If a relaunch is already in progress, await it instead of starting another.
     if (!this.launchPromise) {
+      const crashTime = Date.now();
       this.logger.warn('Browser disconnected — relaunching...');
-      this.launchPromise = this.launchBrowser().finally(() => {
-        this.launchPromise = null;
-      });
+      this.launchPromise = this.launchBrowser()
+        .then(() => this.logger.log(`Browser relaunched successfully in ${Date.now() - crashTime}ms`))
+        .finally(() => { this.launchPromise = null; });
     }
 
     await this.launchPromise;

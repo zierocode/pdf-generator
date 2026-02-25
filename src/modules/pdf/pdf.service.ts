@@ -30,6 +30,9 @@ export class PdfService {
     let renderedHtml: string;
     let pdfOptions: PDFOptions;
 
+    const label = template ?? 'raw-html';
+    const t0 = Date.now();
+
     if (template) {
       this.logger.log(`Rendering template: ${template}`);
       ({ html: renderedHtml, pdfOptions } = this.templateRenderer.render(template, enrichedData) as { html: string; pdfOptions: PDFOptions });
@@ -48,6 +51,9 @@ export class PdfService {
       if (pdfOptions.headerTemplate) pdfOptions.headerTemplate = styleTag + pdfOptions.headerTemplate;
     }
 
-    return this.browserPool.generatePdf(renderedHtml, pdfOptions);
+    const pdfBuffer = await this.browserPool.generatePdf(renderedHtml, pdfOptions);
+    const kb = (pdfBuffer.length / 1024).toFixed(1);
+    this.logger.log(`Rendered ${label} in ${Date.now() - t0}ms (${kb} KB)`);
+    return pdfBuffer;
   }
 }
