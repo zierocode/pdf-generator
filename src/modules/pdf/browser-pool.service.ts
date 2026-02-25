@@ -195,6 +195,14 @@ export class BrowserPoolService implements OnModuleInit, OnModuleDestroy {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--font-render-hinting=none',
+        '--no-zygote',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-sync',
+        '--disable-translate',
+        '--no-first-run',
+        '--hide-scrollbars',
+        '--mute-audio',
       ],
     });
     this.logger.log('Puppeteer browser launched');
