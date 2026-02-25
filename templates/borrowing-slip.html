@@ -52,6 +52,7 @@
       --brand:      #1a9e96;  /* teal accent: header border, table header tint */
       --th-bg:      #b8dcdb;  /* parts-table header background */
       --th-border:  #9ccbca;  /* parts-table header border */
+      --row-alt-bg: #f2f7f7;  /* alternating row background (zebra stripe) */
 
       /* ── Typography ─────────────────────────────────────────────── */
       --font-company:   16px;  /* company name in header */
@@ -125,6 +126,7 @@
     }
 
     .parts-table td { border: 1px solid #ccc; padding: 4px; vertical-align: middle; overflow-wrap: break-word; font-size: var(--font-body); }
+    .parts-table tbody tr:nth-child(odd)  td { background: var(--row-alt-bg); }
     .parts-table tbody tr:nth-child(even) td { background: #fff; }
 
     /* Column widths: 12 + 6×5 + 2×13 = 68% → col-matname gets remaining 32% */
