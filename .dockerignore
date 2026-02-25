@@ -1,7 +1,7 @@
 node_modules
 dist
 output
-.git
+# .git kept — builder stage uses it to extract commit hash
 .github
 .env
 .env.*
