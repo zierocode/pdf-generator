@@ -35,6 +35,7 @@ export class TemplateRendererService implements OnModuleInit {
     this.loadPdfBaseCss();
     this.compileTemplates();
     this.logger.log(`Loaded ${this.templates.size} templates from ${this.templateDir}`);
+    this.watchTemplates();
   }
 
   // ---------------------------------------------------------------------------
@@ -130,6 +131,23 @@ export class TemplateRendererService implements OnModuleInit {
         this.templates.set(name, Handlebars.compile(content));
       }
     }
+  }
+
+  private watchTemplates() {
+    if (!fs.existsSync(this.templateDir)) return;
+    fs.watch(this.templateDir, (_, filename) => {
+      if (!filename?.endsWith('.html')) return;
+      const name = filename.replace('.html', '');
+      const filePath = path.join(this.templateDir, filename);
+      if (fs.existsSync(filePath)) {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        this.templates.set(name, Handlebars.compile(content));
+        this.logger.log(`Template reloaded: ${name}`);
+      } else {
+        this.templates.delete(name);
+        this.logger.log(`Template removed: ${name}`);
+      }
+    });
   }
 
   private registerHelpers() {

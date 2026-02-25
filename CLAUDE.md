@@ -77,6 +77,10 @@ Single endpoint handles everything. Auth: `X-API-Key` header (set `PDF_API_KEY` 
 |---|---|
 | (none) | Save PDF to `output/`, return `{ success, fileName, fileUrl, fileSize }` (201) |
 | `?output=stream` | Return PDF binary (200) |
+| `?output=html` | Return rendered HTML (200) — browser preview, looks identical to PDF |
+
+### `GET /pdf/preview/:template`
+Browser preview — renders template with `test/fixtures/<template>.fixture.json` as data and returns HTML. No auth required. Open directly in browser for fast layout iteration.
 
 ### `GET /pdf/files/:fileName`
 Download a previously saved PDF (auto-purged after 24h).
@@ -98,6 +102,12 @@ curl -X POST "http://localhost:3000/pdf/render?output=stream" \
   -d "{\"template\":\"service-order\",\"data\":$(cat test/fixtures/service-order.fixture.json)}" \
   --output out.pdf
 
+# HTML preview → open in browser (looks identical to PDF)
+curl -X POST "http://localhost:3000/pdf/render?output=html" \
+  -H "Content-Type: application/json" \
+  -d "{\"template\":\"borrowing-slip\",\"data\":$(cat test/fixtures/borrowing-slip.fixture.json)}" \
+  > preview.html && open preview.html
+
 # Raw HTML
 curl -X POST http://localhost:3000/pdf/render \
   -H "Content-Type: application/json" \
@@ -108,6 +118,8 @@ curl -X POST http://localhost:3000/pdf/render \
 
 ### Conventions
 
+**Multi-page layout pattern** — outer `<table>` with `<thead>` repeating the document header natively on every page. No `position: fixed` tricks needed.
+
 ```html
 <!DOCTYPE html>
 <html lang="th">
@@ -115,29 +127,53 @@ curl -X POST http://localhost:3000/pdf/render \
   <meta charset="utf-8">
   <link rel="stylesheet" href="/assets/pdf-base.css">  <!-- inlined server-side -->
   <style>
-    body { margin-top: 30mm; }  /* must match .pdf-header height */
+    /* ── Config block: edit knobs here ── */
+    :root {
+      --pg-h:      8mm;   /* left/right padding for header, content, footer */
+      --pg-bottom: 20mm;  /* ⚠ SYNC with @page below AND pdf-options margin.bottom */
+      --brand:     #1a9e96;
+      /* font sizes, colors, column widths … */
+    }
+
+    /* Outer table: <thead> repeats the document header on every printed page */
+    .page-layout  { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .page-header  { padding: 6mm var(--pg-h) 0 var(--pg-h); }
+    .page-content { padding: 4mm var(--pg-h) 8mm var(--pg-h); vertical-align: top; }
+
+    @media print {
+      /* ⚠ SYNC: keep equal to --pg-bottom AND pdf-options margin.bottom */
+      @page { margin-bottom: 20mm; }
+      /* prevent data rows from splitting across pages */
+      .items-table tbody tr { page-break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
 
-  <!-- Header: position:fixed → repeats on every printed page -->
-  <div class="pdf-header"> ... </div>
-
-  <!-- Content: page 1 -->
-  <p>{{variableName}}</p>
-  {{#each items}}<tr>...</tr>{{/each}}
-
-  <!-- Page break -->
-  <div class="page-break"></div>
-
-  <!-- Page 2: needs padding-top to clear fixed header -->
-  <div style="padding-top: 30mm"> ... </div>
+  <table class="page-layout">
+    <thead>
+      <tr><td class="page-header">
+        <!-- logo, company name, doc title, doc number — repeats on every page -->
+      </td></tr>
+    </thead>
+    <tbody>
+      <tr><td class="page-content">
+        <!-- all document content: info table, section headings, data table -->
+        <p>{{variableName}}</p>
+        <table class="items-table">
+          <thead><tr><!-- column headers — also repeat via nested thead --></tr></thead>
+          <tbody>{{#each items}}<tr>...</tr>{{/each}}</tbody>
+        </table>
+      </td></tr>
+    </tbody>
+  </table>
 
   <!-- Optional: override Puppeteer PDF options (Handlebars variables resolved before extraction) -->
+  <!-- ⚠ margin.bottom, footer font-size, padding-right must SYNC with :root CSS vars above -->
   <script type="application/pdf-options">
   {
-    "footerTemplate": "<div style='font-family:Bai Jamjuree,sans-serif;...'>{{documentNo}} <span class='pageNumber'></span>/<span class='totalPages'></span></div>",
-    "margin": { "top": "0", "right": "0", "bottom": "12mm", "left": "0" }
+    "margin": { "top": "0", "right": "0", "bottom": "20mm", "left": "0" },
+    "footerTemplate": "<div style='font-family:\"Bai Jamjuree\",sans-serif;font-size:14px;width:100%;text-align:right;padding-right:8mm;box-sizing:border-box;'><span class='pageNumber'></span> / <span class='totalPages'></span></div>"
   }
   </script>
 
@@ -151,6 +187,7 @@ curl -X POST http://localhost:3000/pdf/render \
 - `<img src="/assets/images/...">` → auto-inlined as base64 before Puppeteer
 - `<script type="application/pdf-options">` block is extracted after Handlebars compile and stripped from HTML; Bai Jamjuree font is auto-injected into footer/headerTemplate server-side
 - Default page number footer (N / M, bottom-right) is provided automatically when no pdf-options block is present
+- CSS `var()` does **not** work inside `@page {}` rules or the pdf-options JSON block — hardcode those values and mark with `⚠ SYNC` comments
 
 ### Handlebars helpers
 
@@ -197,7 +234,7 @@ POST /pdf/render { template, data }
 ## Key Design Decisions
 
 - **`pdf-base.css`** — Bai Jamjuree fonts embedded as base64 `@font-face`. Served at `/assets/pdf-base.css` for browser preview; inlined as `<style>` tag before Puppeteer (no network needed at render time).
-- **`position: fixed`** for `.pdf-header` — Puppeteer repeats it on every printed page. Page footer is handled by Puppeteer's `displayHeaderFooter` (not a CSS `.pdf-footer` element).
+- **Outer `<table>` layout** — `<thead>` holds the document header (logo, company, doc number); browser repeats it natively on every printed page via `table-header-group`. No `position: fixed` needed. `<tbody>` holds all content in one `<td>`. Nested `<thead>` inside data tables also repeats column headers automatically. Page footer is handled by Puppeteer's `displayHeaderFooter` via `footerTemplate`.
 - **QR code auto-generation** — `PdfService` checks for `qrCodeContent` in data and generates `qrCodeDataUri` via `qrcode` package before template rendering.
 - **Single Puppeteer instance** — reused across requests, auto-reconnects on crash, 30s timeout.
 - **`waitUntil: domcontentloaded`** — all assets are inline base64, no network needed.
@@ -214,8 +251,9 @@ POST /pdf/render { template, data }
 
 - **`{{...}}` in HTML comments** — Handlebars parses them even inside `<!-- -->`. Use `\{{` escape in comment docs.
 - **`pdf-base.css` must be committed** — it's a generated artifact. Re-run `node scripts/build-pdf-base-css.js` when fonts change.
-- **Page 2 content** needs `padding-top: <header-height>` after `.page-break` to clear fixed header.
+- **Bottom margin must be set in TWO places** — `@page { margin-bottom: Xmm }` (CSS, tells Chrome layout engine) AND `"margin": { "bottom": "Xmm" }` in pdf-options JSON (tells Puppeteer footer area). If only one is set, content overflows into the footer. Mark both with `⚠ SYNC`.
+- **CSS `var()` in `@page` doesn't work** — `@page { margin-bottom: var(--foo) }` is not supported in Chrome. Hardcode the value and rely on the `⚠ SYNC` comment pattern.
 - **Thai dates** — Buddhist era = Gregorian + 543. Use `{{dateFormat}}` helper.
 - **zsh glob** — quote URLs containing `?`: `"http://localhost:3000/pdf/render?output=stream"`
-- **Template reload** — templates are compiled at server startup. Restart to pick up new/renamed files.
+- **Template reload** — templates compile at server startup. Restart to pick up new/renamed files.
 - **Teal brand** — `#1a9e96`

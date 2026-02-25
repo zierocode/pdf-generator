@@ -13,6 +13,8 @@ import {
   Logger,
   UseGuards,
 } from '@nestjs/common';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { Response } from 'express';
 import { PdfService } from './pdf.service';
 import { FileStorageService } from './file-storage.service';
@@ -36,6 +38,7 @@ export class PdfController {
    *   { html: "<!DOCTYPE html>...", data: { ... } }    ← raw HTML
    *
    * Query:
+   *   ?output=html    → rendered HTML (200) — for browser preview
    *   ?output=stream  → PDF binary (200)
    *   (default)       → save file, return JSON { success, fileName, fileUrl, fileSize } (201)
    */
@@ -50,11 +53,21 @@ export class PdfController {
     }
 
     const ip = res.req.ip ?? res.req.socket.remoteAddress ?? 'unknown';
-    const mode = output === 'stream' ? 'stream' : 'save';
+    const mode = output === 'html' ? 'html' : output === 'stream' ? 'stream' : 'save';
     const source = body.template ? `template:${body.template}` : 'raw-html';
     this.logger.log(`Render request — ${source} mode:${mode} ip:${ip}`);
 
     try {
+      if (output === 'html') {
+        const renderedHtml = await this.pdfService.renderHtmlOnly({
+          template: body.template,
+          html: body.html,
+          data: body.data ?? {},
+        });
+        res.set({ 'Content-Type': 'text/html; charset=utf-8' });
+        return res.status(HttpStatus.OK).send(renderedHtml);
+      }
+
       const pdfBuffer = await this.pdfService.render({
         template: body.template,
         html: body.html,
@@ -89,6 +102,29 @@ export class PdfController {
       const msg = error instanceof Error ? error.message : String(error);
       this.logger.error(`Render failed: ${msg}`, error instanceof Error ? error.stack : undefined);
       throw new HttpException(msg || 'PDF generation failed', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+  }
+
+  /**
+   * Browser preview: renders template with its fixture file and returns HTML.
+   * No auth required in dev; uses test/fixtures/:template.fixture.json as data.
+   *
+   * GET /pdf/preview/borrowing-slip
+   */
+  @Get('preview/:template')
+  async preview(@Param('template') template: string, @Res() res: Response) {
+    const fixturePath = path.join(process.cwd(), 'test/fixtures', `${template}.fixture.json`);
+    let data: Record<string, unknown> = {};
+    if (fs.existsSync(fixturePath)) {
+      data = JSON.parse(fs.readFileSync(fixturePath, 'utf-8')) as Record<string, unknown>;
+    }
+    try {
+      const html = await this.pdfService.renderHtmlOnly({ template, data });
+      res.set({ 'Content-Type': 'text/html; charset=utf-8' });
+      return res.status(HttpStatus.OK).send(html);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      throw new HttpException(msg, HttpStatus.INTERNAL_SERVER_ERROR);
     }
   }
 

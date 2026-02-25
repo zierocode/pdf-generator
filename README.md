@@ -30,7 +30,7 @@ curl http://localhost:3000/health
 
 | Template | Description | Pages |
 |---|---|---|
-| `borrowing-slip` | ใบยืมสินค้า/อะไหล่ | 1 |
+| `borrowing-slip` | ใบยืมสินค้า/อะไหล่ | 1+ (auto-paginate) |
 | `service-order` | ใบสั่งงานบริการ | 2 |
 
 Template files: `templates/*.html` — edit directly, restart server to reload.
@@ -63,6 +63,7 @@ Render a named template or raw HTML to PDF.
 |---|---|
 | *(none)* | `201` — Save PDF to `output/`, return `{ success, fileName, fileUrl, fileSize }` |
 | `?output=stream` | `200` — PDF binary (`application/pdf`) |
+| `?output=html` | `200` — Rendered HTML (for debugging layout in browser) |
 
 **Stream example:**
 ```bash
@@ -78,6 +79,16 @@ curl -X POST http://localhost:3000/pdf/render \
   -H "Content-Type: application/json" \
   -d "{\"template\":\"service-order\",\"data\":$(cat test/fixtures/service-order.fixture.json)}"
 # → { "success": true, "fileName": "service-order-abc123-1234567890.pdf", "fileUrl": "http://...", "fileSize": 175000 }
+```
+
+---
+
+### `GET /pdf/preview/:template`
+
+Browser preview — renders a named template with its fixture file (`test/fixtures/<template>.fixture.json`) and returns HTML. Useful for fast layout iteration without generating a PDF.
+
+```bash
+open http://localhost:3000/pdf/preview/borrowing-slip
 ```
 
 ---
@@ -122,14 +133,42 @@ curl http://localhost:3000/health
 <head>
   <meta charset="utf-8">
   <link rel="stylesheet" href="/assets/pdf-base.css">
-  <style>body { margin-top: 30mm; }</style>
+  <style>
+    /* ── Config ── */
+    :root {
+      --pg-h:      8mm;   /* left/right padding */
+      --pg-bottom: 20mm;  /* ⚠ SYNC with @page below and pdf-options margin.bottom */
+      --brand:     #1a9e96;
+    }
+    /* Outer table: <thead> repeats the document header on every page natively */
+    .page-layout  { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .page-header  { padding: 6mm var(--pg-h) 0 var(--pg-h); }
+    .page-content { padding: 4mm var(--pg-h) 8mm var(--pg-h); vertical-align: top; }
+    @media print {
+      @page { margin-bottom: 20mm; }  /* ⚠ SYNC with --pg-bottom */
+      .items-table tbody tr { page-break-inside: avoid; }
+    }
+  </style>
 </head>
 <body>
-  <div class="pdf-header"><!-- logo + doc title --></div>
-  <div class="content">
-    <p>{{customerName}}</p>
-    <p>{{dateFormat openDate}}</p>
-  </div>
+  <table class="page-layout">
+    <thead>
+      <tr><td class="page-header"><!-- logo, company name, doc number --></td></tr>
+    </thead>
+    <tbody>
+      <tr><td class="page-content">
+        <p>{{customerName}}</p>
+        <p>{{dateFormat openDate}}</p>
+        <table class="items-table">
+          <thead><tr><!-- column headers --></tr></thead>
+          <tbody>{{#each items}}<tr><!-- row --></tr>{{/each}}</tbody>
+        </table>
+      </td></tr>
+    </tbody>
+  </table>
+  <script type="application/pdf-options">
+  { "margin": { "top": "0", "right": "0", "bottom": "20mm", "left": "0" } }
+  </script>
 </body>
 </html>
 ```

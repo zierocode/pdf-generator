@@ -27,6 +27,11 @@ import { PdfModule } from './modules/pdf/pdf.module';
       rootPath: path.join(process.cwd(), 'assets'),
       serveRoot: '/assets',
     }),
+    // Serve /templates/* — raw HTML files for browser preview
+    ServeStaticModule.forRoot({
+      rootPath: path.join(process.cwd(), 'templates'),
+      serveRoot: '/templates',
+    }),
     PdfModule,
   ],
   controllers: [AppController],

@@ -18,6 +18,19 @@ export class PdfService {
     private readonly templateRenderer: TemplateRendererService,
   ) {}
 
+  /** Return the rendered HTML string without generating a PDF (for browser preview). */
+  async renderHtmlOnly({ template, html, data = {} }: RenderOptions): Promise<string> {
+    const enrichedData = { ...data };
+    if (enrichedData.qrCodeContent && typeof enrichedData.qrCodeContent === 'string') {
+      enrichedData.qrCodeDataUri = await this.templateRenderer.generateQrCodeDataUri(
+        enrichedData.qrCodeContent,
+      );
+    }
+    if (template) return this.templateRenderer.render(template, enrichedData).html;
+    if (html)     return this.templateRenderer.renderHtml(html, enrichedData).html;
+    throw new Error('Either template or html must be provided');
+  }
+
   async render({ template, html, data = {} }: RenderOptions): Promise<Buffer> {
     // Auto-generate QR code data URI if caller supplies qrCodeContent
     const enrichedData = { ...data };
